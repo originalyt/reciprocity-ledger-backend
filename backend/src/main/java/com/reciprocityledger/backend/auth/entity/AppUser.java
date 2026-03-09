@@ -17,9 +17,34 @@ public class AppUser {
     private Long id;
 
     /**
-     * 登录手机号。
+     * 登录邮箱，唯一。
+     */
+    private String email;
+
+    /**
+     * 邮箱是否已验证。
+     */
+    private Boolean emailVerified;
+
+    /**
+     * 绑定手机号，唯一，可为空。
      */
     private String phone;
+
+    /**
+     * 手机号是否已验证。
+     */
+    private Boolean phoneVerified;
+
+    /**
+     * 密码哈希。
+     */
+    private String passwordHash;
+
+    /**
+     * 密码盐值。
+     */
+    private String passwordSalt;
 
     /**
      * 用户昵称。

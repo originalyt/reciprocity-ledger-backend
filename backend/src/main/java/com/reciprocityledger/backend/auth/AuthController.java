@@ -3,11 +3,10 @@ package com.reciprocityledger.backend.auth;
 import com.reciprocityledger.backend.auth.dto.request.LoginRequest;
 import com.reciprocityledger.backend.auth.dto.request.LogoutRequest;
 import com.reciprocityledger.backend.auth.dto.request.RefreshTokenRequest;
-import com.reciprocityledger.backend.auth.dto.request.SendSmsCodeRequest;
+import com.reciprocityledger.backend.auth.dto.request.RegisterRequest;
 import com.reciprocityledger.backend.auth.dto.response.LoginResponse;
 import com.reciprocityledger.backend.auth.dto.response.LogoutResponse;
 import com.reciprocityledger.backend.auth.dto.response.RefreshTokenResponse;
-import com.reciprocityledger.backend.auth.dto.response.SendSmsCodeResponse;
 import com.reciprocityledger.backend.auth.service.AuthService;
 import com.reciprocityledger.backend.common.api.ApiResponse;
 import jakarta.validation.Valid;
@@ -24,9 +23,9 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @PostMapping("/sms/send")
-    public ApiResponse<SendSmsCodeResponse> sendSmsCode(@Valid @RequestBody SendSmsCodeRequest request) {
-        return ApiResponse.success(authService.sendSmsCode(request));
+    @PostMapping("/register")
+    public ApiResponse<LoginResponse> register(@Valid @RequestBody RegisterRequest request) {
+        return ApiResponse.success(authService.register(request));
     }
 
     @PostMapping("/login")

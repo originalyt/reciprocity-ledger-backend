@@ -10,7 +10,12 @@ BEGIN;
 
 CREATE TABLE IF NOT EXISTS app_user (
   id                  BIGINT PRIMARY KEY,
-  phone               VARCHAR(20) NOT NULL,
+  email               VARCHAR(128) NOT NULL,
+  email_verified      BOOLEAN NOT NULL DEFAULT FALSE,
+  phone               VARCHAR(20),
+  phone_verified      BOOLEAN NOT NULL DEFAULT FALSE,
+  password_hash       VARCHAR(128) NOT NULL,
+  password_salt       VARCHAR(64) NOT NULL,
   nickname            VARCHAR(64),
   status              VARCHAR(16) NOT NULL DEFAULT 'ACTIVE',
   last_login_at       TIMESTAMPTZ,
@@ -18,13 +23,19 @@ CREATE TABLE IF NOT EXISTS app_user (
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   created_by          BIGINT,
   updated_by          BIGINT,
+  CONSTRAINT uq_app_user_email UNIQUE (email),
   CONSTRAINT uq_app_user_phone UNIQUE (phone),
   CONSTRAINT ck_app_user_status CHECK (status IN ('ACTIVE', 'DISABLED'))
 );
 
 COMMENT ON TABLE app_user IS '应用用户表（多用户隔离主体）';
 COMMENT ON COLUMN app_user.id IS '主键ID（应用生成，非自增）';
-COMMENT ON COLUMN app_user.phone IS '登录手机号，唯一';
+COMMENT ON COLUMN app_user.email IS '登录邮箱，唯一';
+COMMENT ON COLUMN app_user.email_verified IS '邮箱是否已验证';
+COMMENT ON COLUMN app_user.phone IS '绑定手机号，唯一，可为空';
+COMMENT ON COLUMN app_user.phone_verified IS '手机号是否已验证';
+COMMENT ON COLUMN app_user.password_hash IS '密码哈希';
+COMMENT ON COLUMN app_user.password_salt IS '密码盐值';
 COMMENT ON COLUMN app_user.nickname IS '用户昵称';
 COMMENT ON COLUMN app_user.status IS '用户状态：ACTIVE启用，DISABLED禁用';
 COMMENT ON COLUMN app_user.last_login_at IS '最近登录时间';
@@ -186,26 +197,6 @@ CREATE INDEX IF NOT EXISTS idx_ledger_record_user_type_occurred_on
 CREATE INDEX IF NOT EXISTS idx_ledger_record_user_event
   ON ledger_record (user_id, event_exchange_id, occurred_on DESC);
 
-CREATE TABLE IF NOT EXISTS login_verification_code (
-  id                  BIGINT PRIMARY KEY,
-  phone               VARCHAR(20) NOT NULL,
-  verification_code   VARCHAR(8) NOT NULL,
-  expires_at          TIMESTAMPTZ NOT NULL,
-  used                BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-COMMENT ON TABLE login_verification_code IS '登录验证码表';
-COMMENT ON COLUMN login_verification_code.id IS '主键ID（应用生成，非自增）';
-COMMENT ON COLUMN login_verification_code.phone IS '手机号';
-COMMENT ON COLUMN login_verification_code.verification_code IS '验证码';
-COMMENT ON COLUMN login_verification_code.expires_at IS '过期时间';
-COMMENT ON COLUMN login_verification_code.used IS '是否已使用';
-COMMENT ON COLUMN login_verification_code.created_at IS '创建时间';
-
-CREATE INDEX IF NOT EXISTS idx_login_verification_code_phone_created
-  ON login_verification_code (phone, created_at DESC);
-
 CREATE TABLE IF NOT EXISTS user_refresh_token (
   id                  BIGINT PRIMARY KEY,
   user_id             BIGINT NOT NULL,
@@ -248,4 +239,3 @@ SET name = EXCLUDED.name,
     updated_at = NOW();
 
 COMMIT;
-
