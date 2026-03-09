@@ -1,0 +1,16 @@
+package com.reciprocityledger.backend.contact.dto.response;
+
+import lombok.Data;
+
+import java.time.LocalDate;
+
+@Data
+public class ContactDetailResponse {
+
+    private Long id;
+    private String name;
+    private String relation;
+    private String phone;
+    private String note;
+    private LocalDate lastInteractionOn;
+}
