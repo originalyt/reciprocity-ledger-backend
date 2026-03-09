@@ -4,7 +4,7 @@ Spring Boot backend service for the reciprocity ledger project.
 
 ## Tech stack
 
-- Spring Boot 3.3.0
+- Spring Boot 3.5.11
 - Java 17
 - Maven
 - PostgreSQL
@@ -38,4 +38,5 @@ mvn clean package
 
 - `GET /api/health`
 - `GET /actuator/health`
+
 
