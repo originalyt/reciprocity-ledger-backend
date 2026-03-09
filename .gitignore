@@ -1,0 +1,39 @@
+# Build outputs
+backend/target/
+out/
+bin/
+*.class
+*.jar
+*.war
+*.ear
+
+# Logs and JVM crash files
+*.log
+logs/
+hs_err_pid*
+replay_pid*
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local environment files
+.env
+.env.local
+.env.*.local
+
+# Spring local config overrides
+application-local.yml
+application-local.yaml
+application-local.properties
+application-*.local.yml
+application-*.local.yaml
+application-*.local.properties
