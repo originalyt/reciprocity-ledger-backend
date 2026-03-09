@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: reciprocity-ledger-backend
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/reciprocity_ledger}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:123456}
+
+server:
+  port: 8080
+
+mybatis:
+  mapper-locations: classpath*:mapper/**/*.xml
+  type-aliases-package: com.reciprocityledger.backend
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
