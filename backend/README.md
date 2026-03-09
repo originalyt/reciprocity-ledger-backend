@@ -4,8 +4,8 @@ Spring Boot backend service for the reciprocity ledger project.
 
 ## Tech stack
 
-- Spring Boot 2.7.18
-- Java 11
+- Spring Boot 3.3.0
+- Java 17
 - Maven
 - PostgreSQL
 - MyBatis
@@ -38,3 +38,4 @@ mvn clean package
 
 - `GET /api/health`
 - `GET /actuator/health`
+

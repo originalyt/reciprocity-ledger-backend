@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.7.18</version>
+        <version>3.3.0</version>
         <relativePath />
     </parent>
     <groupId>com.reciprocityledger</groupId>
@@ -13,8 +13,9 @@
     <name>reciprocity-ledger-backend</name>
     <description>Backend service for reciprocity ledger</description>
     <properties>
-        <java.version>11</java.version>
-        <mybatis-spring-boot.version>2.3.2</mybatis-spring-boot.version>
+        <java.version>17</java.version>
+        <maven.compiler.release>${java.version}</maven.compiler.release>
+        <mybatis-spring-boot.version>3.0.3</mybatis-spring-boot.version>
         <hutool.version>5.8.40</hutool.version>
     </properties>
     <dependencies>
