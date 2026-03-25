@@ -2,68 +2,62 @@ package com.reciprocityledger.backend.contact.entity;
 
 import lombok.Data;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
  * 联系人实体。
- * 映射数据库表：contact。
+ * 映射数据库表：rl_contact。
  */
 @Data
 public class Contact {
 
     /**
-     * 联系人主键ID，对应表主键 contact.id，由应用层生成，非自增。
+     * 主键，联系人唯一标识。
      */
-    private Long id;
-
-    /**
-     * 所属用户ID。
-     */
-    private Long userId;
+    private String id;
 
     /**
      * 联系人姓名。
      */
-    private String name;
+    private String contactName;
 
     /**
-     * 与我的关系。
+     * 联系人别名。
      */
-    private String relation;
+    private String aliasName;
+
+    /**
+     * 联系人称呼。
+     */
+    private String salutation;
 
     /**
      * 联系人手机号。
      */
-    private String phone;
+    private String mobile;
 
     /**
-     * 联系人备注。
+     * 关系类型，用于联系人分类和筛选。
      */
-    private String note;
+    private String relationType;
 
     /**
-     * 最近往来日期。
+     * 备注，用于记录联系人补充说明。
      */
-    private LocalDate lastInteractionOn;
+    private String remark;
+
+    /**
+     * 状态，用于标识联系人是否可继续使用。
+     */
+    private String status;
 
     /**
      * 创建时间。
      */
-    private LocalDateTime createdAt;
+    private LocalDateTime createTime;
 
     /**
      * 更新时间。
      */
-    private LocalDateTime updatedAt;
-
-    /**
-     * 创建人ID。
-     */
-    private Long createdBy;
-
-    /**
-     * 更新人ID。
-     */
-    private Long updatedBy;
+    private LocalDateTime updateTime;
 }

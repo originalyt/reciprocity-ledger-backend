@@ -1,241 +1,173 @@
-BEGIN;
-
--- =========================================================
--- Reciprocity Ledger Baseline Schema
--- 说明：
--- 1) 本文件是当前唯一基线 SQL，适用于全新数据库直接初始化
--- 2) 后续结构调整请新增增量 SQL，不再回拆成多份基线脚本
--- 3) 所有关联采用逻辑关联（*_id / code），不使用 FOREIGN KEY
--- =========================================================
-
-CREATE TABLE IF NOT EXISTS app_user (
-  id                  BIGINT PRIMARY KEY,
-  email               VARCHAR(128) NOT NULL,
-  email_verified      BOOLEAN NOT NULL DEFAULT FALSE,
-  phone               VARCHAR(20),
-  phone_verified      BOOLEAN NOT NULL DEFAULT FALSE,
-  password_hash       VARCHAR(128) NOT NULL,
-  password_salt       VARCHAR(64) NOT NULL,
-  nickname            VARCHAR(64),
-  status              VARCHAR(16) NOT NULL DEFAULT 'ACTIVE',
-  last_login_at       TIMESTAMPTZ,
-  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  created_by          BIGINT,
-  updated_by          BIGINT,
-  CONSTRAINT uq_app_user_email UNIQUE (email),
-  CONSTRAINT uq_app_user_phone UNIQUE (phone),
-  CONSTRAINT ck_app_user_status CHECK (status IN ('ACTIVE', 'DISABLED'))
+CREATE TABLE IF NOT EXISTS rl_contact (
+    id VARCHAR(32) PRIMARY KEY,
+    contact_name VARCHAR(64) NOT NULL,
+    alias_name VARCHAR(64),
+    salutation VARCHAR(64),
+    mobile VARCHAR(20),
+    relation_type VARCHAR(32) NOT NULL,
+    remark VARCHAR(500),
+    status VARCHAR(16) NOT NULL DEFAULT 'NORMAL',
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-COMMENT ON TABLE app_user IS '应用用户表（多用户隔离主体）';
-COMMENT ON COLUMN app_user.id IS '主键ID（应用生成，非自增）';
-COMMENT ON COLUMN app_user.email IS '登录邮箱，唯一';
-COMMENT ON COLUMN app_user.email_verified IS '邮箱是否已验证';
-COMMENT ON COLUMN app_user.phone IS '绑定手机号，唯一，可为空';
-COMMENT ON COLUMN app_user.phone_verified IS '手机号是否已验证';
-COMMENT ON COLUMN app_user.password_hash IS '密码哈希';
-COMMENT ON COLUMN app_user.password_salt IS '密码盐值';
-COMMENT ON COLUMN app_user.nickname IS '用户昵称';
-COMMENT ON COLUMN app_user.status IS '用户状态：ACTIVE启用，DISABLED禁用';
-COMMENT ON COLUMN app_user.last_login_at IS '最近登录时间';
-COMMENT ON COLUMN app_user.created_at IS '创建时间（审计）';
-COMMENT ON COLUMN app_user.updated_at IS '修改时间（审计）';
-COMMENT ON COLUMN app_user.created_by IS '创建人ID（审计）';
-COMMENT ON COLUMN app_user.updated_by IS '修改人ID（审计）';
+COMMENT ON TABLE rl_contact IS '联系人表';
+COMMENT ON COLUMN rl_contact.id IS '主键，联系人唯一标识';
+COMMENT ON COLUMN rl_contact.contact_name IS '联系人姓名';
+COMMENT ON COLUMN rl_contact.alias_name IS '联系人别名';
+COMMENT ON COLUMN rl_contact.salutation IS '联系人称呼';
+COMMENT ON COLUMN rl_contact.mobile IS '联系人手机号';
+COMMENT ON COLUMN rl_contact.relation_type IS '关系类型';
+COMMENT ON COLUMN rl_contact.remark IS '备注';
+COMMENT ON COLUMN rl_contact.status IS '状态，NORMAL表示正常，DISABLED表示停用';
+COMMENT ON COLUMN rl_contact.create_time IS '创建时间';
+COMMENT ON COLUMN rl_contact.update_time IS '更新时间';
 
-CREATE TABLE IF NOT EXISTS event_type_dict (
-  id                  BIGINT PRIMARY KEY,
-  code                VARCHAR(32) NOT NULL,
-  name                VARCHAR(64) NOT NULL,
-  sort_order          INTEGER NOT NULL DEFAULT 0,
-  enabled             BOOLEAN NOT NULL DEFAULT TRUE,
-  built_in            BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  created_by          BIGINT,
-  updated_by          BIGINT,
-  CONSTRAINT uq_event_type_dict_code UNIQUE (code)
+CREATE INDEX IF NOT EXISTS idx_rl_contact_name ON rl_contact(contact_name);
+CREATE INDEX IF NOT EXISTS idx_rl_contact_mobile ON rl_contact(mobile);
+CREATE INDEX IF NOT EXISTS idx_rl_contact_relation_type ON rl_contact(relation_type);
+
+CREATE TABLE IF NOT EXISTS rl_event_type (
+    id VARCHAR(32) PRIMARY KEY,
+    type_code VARCHAR(32) NOT NULL,
+    type_name VARCHAR(64) NOT NULL,
+    sort_no INTEGER NOT NULL DEFAULT 0,
+    enabled_flag BOOLEAN NOT NULL DEFAULT TRUE,
+    built_in_flag BOOLEAN NOT NULL DEFAULT TRUE,
+    remark VARCHAR(500),
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_rl_event_type_code UNIQUE (type_code)
 );
 
-COMMENT ON TABLE event_type_dict IS '事件类型字典表（前后端统一口径）';
-COMMENT ON COLUMN event_type_dict.id IS '主键ID（手工或应用生成，非自增）';
-COMMENT ON COLUMN event_type_dict.code IS '事件类型编码（业务唯一）';
-COMMENT ON COLUMN event_type_dict.name IS '事件类型名称';
-COMMENT ON COLUMN event_type_dict.sort_order IS '排序值，越小越靠前';
-COMMENT ON COLUMN event_type_dict.enabled IS '是否启用';
-COMMENT ON COLUMN event_type_dict.built_in IS '是否系统内置';
-COMMENT ON COLUMN event_type_dict.created_at IS '创建时间（审计）';
-COMMENT ON COLUMN event_type_dict.updated_at IS '修改时间（审计）';
-COMMENT ON COLUMN event_type_dict.created_by IS '创建人ID（审计）';
-COMMENT ON COLUMN event_type_dict.updated_by IS '修改人ID（审计）';
+COMMENT ON TABLE rl_event_type IS '事件类型字典表';
+COMMENT ON COLUMN rl_event_type.id IS '主键，事件类型唯一标识';
+COMMENT ON COLUMN rl_event_type.type_code IS '业务唯一键，事件类型编码';
+COMMENT ON COLUMN rl_event_type.type_name IS '事件类型名称';
+COMMENT ON COLUMN rl_event_type.sort_no IS '排序号';
+COMMENT ON COLUMN rl_event_type.enabled_flag IS '是否启用，true表示启用';
+COMMENT ON COLUMN rl_event_type.built_in_flag IS '是否系统内置，true表示内置类型';
+COMMENT ON COLUMN rl_event_type.remark IS '备注';
+COMMENT ON COLUMN rl_event_type.create_time IS '创建时间';
+COMMENT ON COLUMN rl_event_type.update_time IS '更新时间';
 
-CREATE TABLE IF NOT EXISTS contact (
-  id                  BIGINT PRIMARY KEY,
-  user_id             BIGINT NOT NULL,
-  name                VARCHAR(64) NOT NULL,
-  relation            VARCHAR(64),
-  phone               VARCHAR(20),
-  note                VARCHAR(500),
-  last_interaction_on DATE,
-  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  created_by          BIGINT,
-  updated_by          BIGINT,
-  CONSTRAINT ck_contact_name_not_blank CHECK (BTRIM(name) <> ''),
-  CONSTRAINT uq_contact_user_id_id UNIQUE (user_id, id)
+CREATE TABLE IF NOT EXISTS rl_event (
+    id VARCHAR(32) PRIMARY KEY,
+    event_name VARCHAR(128) NOT NULL,
+    event_type_id VARCHAR(32) NOT NULL,
+    event_owner_type VARCHAR(16) NOT NULL,
+    owner_contact_id VARCHAR(32),
+    event_date DATE NOT NULL,
+    remark VARCHAR(500),
+    status VARCHAR(16) NOT NULL DEFAULT 'NORMAL',
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_rl_event_type_id FOREIGN KEY (event_type_id) REFERENCES rl_event_type(id),
+    CONSTRAINT fk_rl_event_owner_contact_id FOREIGN KEY (owner_contact_id) REFERENCES rl_contact(id),
+    CONSTRAINT ck_rl_event_owner_type CHECK (event_owner_type IN ('SELF', 'CONTACT')),
+    CONSTRAINT ck_rl_event_owner_contact CHECK (
+        (event_owner_type = 'SELF' AND owner_contact_id IS NULL)
+        OR (event_owner_type = 'CONTACT' AND owner_contact_id IS NOT NULL)
+    )
 );
 
-COMMENT ON TABLE contact IS '联系人主数据表';
-COMMENT ON COLUMN contact.id IS '主键ID（应用生成，非自增）';
-COMMENT ON COLUMN contact.user_id IS '所属用户ID（逻辑关联 app_user.id）';
-COMMENT ON COLUMN contact.name IS '联系人姓名（必填）';
-COMMENT ON COLUMN contact.relation IS '与我的关系';
-COMMENT ON COLUMN contact.phone IS '联系人手机号';
-COMMENT ON COLUMN contact.note IS '备注';
-COMMENT ON COLUMN contact.last_interaction_on IS '最近往来日期（便于排序）';
-COMMENT ON COLUMN contact.created_at IS '创建时间（审计）';
-COMMENT ON COLUMN contact.updated_at IS '修改时间（审计）';
-COMMENT ON COLUMN contact.created_by IS '创建人ID（审计）';
-COMMENT ON COLUMN contact.updated_by IS '修改人ID（审计）';
+COMMENT ON TABLE rl_event IS '公共事件表';
+COMMENT ON COLUMN rl_event.id IS '主键，事件唯一标识';
+COMMENT ON COLUMN rl_event.event_name IS '事件名称';
+COMMENT ON COLUMN rl_event.event_type_id IS '事件类型主键';
+COMMENT ON COLUMN rl_event.event_owner_type IS '事件归属类型，SELF表示本人事件，CONTACT表示联系人事件';
+COMMENT ON COLUMN rl_event.owner_contact_id IS '联系人事件对应的联系人主键';
+COMMENT ON COLUMN rl_event.event_date IS '事件日期';
+COMMENT ON COLUMN rl_event.remark IS '备注';
+COMMENT ON COLUMN rl_event.status IS '状态，NORMAL表示正常，DISABLED表示停用';
+COMMENT ON COLUMN rl_event.create_time IS '创建时间';
+COMMENT ON COLUMN rl_event.update_time IS '更新时间';
 
-CREATE INDEX IF NOT EXISTS idx_contact_user_name
-  ON contact (user_id, name);
+CREATE INDEX IF NOT EXISTS idx_rl_event_type_id ON rl_event(event_type_id);
+CREATE INDEX IF NOT EXISTS idx_rl_event_date ON rl_event(event_date);
+CREATE INDEX IF NOT EXISTS idx_rl_event_owner ON rl_event(event_owner_type, owner_contact_id);
 
-CREATE INDEX IF NOT EXISTS idx_contact_user_last_interaction
-  ON contact (user_id, last_interaction_on DESC NULLS LAST);
-
-CREATE INDEX IF NOT EXISTS idx_contact_user_name_phone
-  ON contact (user_id, name, phone);
-
-CREATE TABLE IF NOT EXISTS event_exchange (
-  id                  BIGINT PRIMARY KEY,
-  user_id             BIGINT NOT NULL,
-  contact_id          BIGINT NOT NULL,
-  event_type_code     VARCHAR(32) NOT NULL,
-  event_note          VARCHAR(200) NOT NULL DEFAULT '',
-  give_record_id      BIGINT,
-  receive_record_id   BIGINT,
-  give_amount         NUMERIC(12,2) NOT NULL DEFAULT 0,
-  receive_amount      NUMERIC(12,2) NOT NULL DEFAULT 0,
-  net_amount          NUMERIC(12,2) GENERATED ALWAYS AS (receive_amount - give_amount) STORED,
-  latest_occurred_on  DATE NOT NULL,
-  reciprocity_status  VARCHAR(16) NOT NULL,
-  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  created_by          BIGINT,
-  updated_by          BIGINT,
-  CONSTRAINT uq_event_exchange_key UNIQUE (user_id, contact_id, event_type_code, event_note),
-  CONSTRAINT uq_event_exchange_user_id_id UNIQUE (user_id, id),
-  CONSTRAINT ck_event_exchange_status CHECK (reciprocity_status IN ('MUTUAL', 'WAIT_OTHER', 'WAIT_ME')),
-  CONSTRAINT ck_event_exchange_amount_non_negative CHECK (give_amount >= 0 AND receive_amount >= 0)
+CREATE TABLE IF NOT EXISTS rl_gift_record (
+    id VARCHAR(32) PRIMARY KEY,
+    contact_id VARCHAR(32) NOT NULL,
+    event_id VARCHAR(32) NOT NULL,
+    direction VARCHAR(16) NOT NULL,
+    amount NUMERIC(12, 2) NOT NULL,
+    record_date DATE NOT NULL,
+    remark VARCHAR(500),
+    reciprocity_status VARCHAR(32) NOT NULL DEFAULT 'UNMATCHED',
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_rl_gift_record_contact_id FOREIGN KEY (contact_id) REFERENCES rl_contact(id),
+    CONSTRAINT fk_rl_gift_record_event_id FOREIGN KEY (event_id) REFERENCES rl_event(id),
+    CONSTRAINT ck_rl_gift_record_direction CHECK (direction IN ('RECEIVE', 'SEND')),
+    CONSTRAINT ck_rl_gift_record_amount CHECK (amount > 0),
+    CONSTRAINT ck_rl_gift_record_reciprocity_status CHECK (reciprocity_status IN ('UNMATCHED', 'MATCHED', 'MANUAL_CANCELED', 'MANUAL_CONFIRMED'))
 );
 
-COMMENT ON TABLE event_exchange IS '事件往来聚合表（同联系人+同事件配对结果）';
-COMMENT ON COLUMN event_exchange.id IS '主键ID（应用生成，非自增）';
-COMMENT ON COLUMN event_exchange.user_id IS '所属用户ID（逻辑关联 app_user.id）';
-COMMENT ON COLUMN event_exchange.contact_id IS '联系人ID（逻辑关联 contact.id）';
-COMMENT ON COLUMN event_exchange.event_type_code IS '事件类型编码（逻辑关联 event_type_dict.code）';
-COMMENT ON COLUMN event_exchange.event_note IS '事件说明，空串参与唯一键';
-COMMENT ON COLUMN event_exchange.give_record_id IS '随礼记录ID（逻辑关联 ledger_record.id）';
-COMMENT ON COLUMN event_exchange.receive_record_id IS '收礼记录ID（逻辑关联 ledger_record.id）';
-COMMENT ON COLUMN event_exchange.give_amount IS '随礼金额（聚合快照）';
-COMMENT ON COLUMN event_exchange.receive_amount IS '收礼金额（聚合快照）';
-COMMENT ON COLUMN event_exchange.net_amount IS '事件净额=收礼金额-随礼金额（生成列）';
-COMMENT ON COLUMN event_exchange.latest_occurred_on IS '最近发生日期（两条记录取最大）';
-COMMENT ON COLUMN event_exchange.reciprocity_status IS '回礼状态：MUTUAL/WAIT_OTHER/WAIT_ME';
-COMMENT ON COLUMN event_exchange.created_at IS '创建时间（审计）';
-COMMENT ON COLUMN event_exchange.updated_at IS '修改时间（审计）';
-COMMENT ON COLUMN event_exchange.created_by IS '创建人ID（审计）';
-COMMENT ON COLUMN event_exchange.updated_by IS '修改人ID（审计）';
+COMMENT ON TABLE rl_gift_record IS '人情记录表';
+COMMENT ON COLUMN rl_gift_record.id IS '主键，人情记录唯一标识';
+COMMENT ON COLUMN rl_gift_record.contact_id IS '联系人主键';
+COMMENT ON COLUMN rl_gift_record.event_id IS '事件主键';
+COMMENT ON COLUMN rl_gift_record.direction IS '收送方向，RECEIVE表示收礼，SEND表示送礼';
+COMMENT ON COLUMN rl_gift_record.amount IS '金额';
+COMMENT ON COLUMN rl_gift_record.record_date IS '记录日期';
+COMMENT ON COLUMN rl_gift_record.remark IS '备注';
+COMMENT ON COLUMN rl_gift_record.reciprocity_status IS '闭环状态，UNMATCHED表示未闭环，MATCHED表示自动匹配闭环，MANUAL_CANCELED表示手工取消闭环，MANUAL_CONFIRMED表示手工确认闭环';
+COMMENT ON COLUMN rl_gift_record.create_time IS '创建时间';
+COMMENT ON COLUMN rl_gift_record.update_time IS '更新时间';
 
-CREATE INDEX IF NOT EXISTS idx_event_exchange_user_status_latest
-  ON event_exchange (user_id, reciprocity_status, latest_occurred_on DESC);
+CREATE INDEX IF NOT EXISTS idx_rl_gift_record_contact_date ON rl_gift_record(contact_id, record_date);
+CREATE INDEX IF NOT EXISTS idx_rl_gift_record_event_id ON rl_gift_record(event_id);
+CREATE INDEX IF NOT EXISTS idx_rl_gift_record_direction_date ON rl_gift_record(direction, record_date);
+CREATE INDEX IF NOT EXISTS idx_rl_gift_record_reciprocity_status ON rl_gift_record(reciprocity_status);
 
-CREATE INDEX IF NOT EXISTS idx_event_exchange_user_contact
-  ON event_exchange (user_id, contact_id, latest_occurred_on DESC);
-
-CREATE INDEX IF NOT EXISTS idx_event_exchange_user_event_type
-  ON event_exchange (user_id, event_type_code, latest_occurred_on DESC);
-
-CREATE TABLE IF NOT EXISTS ledger_record (
-  id                  BIGINT PRIMARY KEY,
-  user_id             BIGINT NOT NULL,
-  event_exchange_id   BIGINT NOT NULL,
-  record_type         VARCHAR(16) NOT NULL,
-  occurred_on         DATE NOT NULL,
-  amount              NUMERIC(12,2) NOT NULL,
-  remark              VARCHAR(500),
-  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  created_by          BIGINT,
-  updated_by          BIGINT,
-  CONSTRAINT ck_ledger_record_type CHECK (record_type IN ('GIVE', 'RECEIVE')),
-  CONSTRAINT ck_ledger_record_amount_positive CHECK (amount > 0),
-  CONSTRAINT uq_ledger_record_event_type UNIQUE (event_exchange_id, record_type)
+CREATE TABLE IF NOT EXISTS rl_reciprocity_match (
+    id VARCHAR(32) PRIMARY KEY,
+    source_record_id VARCHAR(32) NOT NULL,
+    target_record_id VARCHAR(32) NOT NULL,
+    match_type VARCHAR(16) NOT NULL,
+    match_status VARCHAR(16) NOT NULL DEFAULT 'ACTIVE',
+    cancel_reason VARCHAR(500),
+    remark VARCHAR(500),
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_rl_reciprocity_match_source_record_id FOREIGN KEY (source_record_id) REFERENCES rl_gift_record(id),
+    CONSTRAINT fk_rl_reciprocity_match_target_record_id FOREIGN KEY (target_record_id) REFERENCES rl_gift_record(id),
+    CONSTRAINT ck_rl_reciprocity_match_not_same CHECK (source_record_id <> target_record_id),
+    CONSTRAINT ck_rl_reciprocity_match_type CHECK (match_type IN ('AUTO', 'MANUAL')),
+    CONSTRAINT ck_rl_reciprocity_match_status CHECK (match_status IN ('ACTIVE', 'CANCELED'))
 );
 
-COMMENT ON TABLE ledger_record IS '礼账交易明细表（时间线与统计原始数据）';
-COMMENT ON COLUMN ledger_record.id IS '主键ID（应用生成，非自增）';
-COMMENT ON COLUMN ledger_record.user_id IS '所属用户ID（逻辑关联 app_user.id）';
-COMMENT ON COLUMN ledger_record.event_exchange_id IS '事件往来ID（逻辑关联 event_exchange.id）';
-COMMENT ON COLUMN ledger_record.record_type IS '记录类型：GIVE随礼，RECEIVE收礼';
-COMMENT ON COLUMN ledger_record.occurred_on IS '礼金发生日期（业务统计口径）';
-COMMENT ON COLUMN ledger_record.amount IS '金额，>0，保留2位小数';
-COMMENT ON COLUMN ledger_record.remark IS '备注说明';
-COMMENT ON COLUMN ledger_record.created_at IS '创建时间（审计）';
-COMMENT ON COLUMN ledger_record.updated_at IS '修改时间（审计）';
-COMMENT ON COLUMN ledger_record.created_by IS '创建人ID（审计）';
-COMMENT ON COLUMN ledger_record.updated_by IS '修改人ID（审计）';
+COMMENT ON TABLE rl_reciprocity_match IS '闭环匹配表';
+COMMENT ON COLUMN rl_reciprocity_match.id IS '主键，闭环匹配唯一标识';
+COMMENT ON COLUMN rl_reciprocity_match.source_record_id IS '源记录主键';
+COMMENT ON COLUMN rl_reciprocity_match.target_record_id IS '目标记录主键';
+COMMENT ON COLUMN rl_reciprocity_match.match_type IS '匹配类型，AUTO表示自动识别，MANUAL表示人工确认';
+COMMENT ON COLUMN rl_reciprocity_match.match_status IS '匹配状态，ACTIVE表示有效，CANCELED表示已取消';
+COMMENT ON COLUMN rl_reciprocity_match.cancel_reason IS '取消原因';
+COMMENT ON COLUMN rl_reciprocity_match.remark IS '备注';
+COMMENT ON COLUMN rl_reciprocity_match.create_time IS '创建时间';
+COMMENT ON COLUMN rl_reciprocity_match.update_time IS '更新时间';
 
-CREATE INDEX IF NOT EXISTS idx_ledger_record_user_occurred_on
-  ON ledger_record (user_id, occurred_on DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_rl_reciprocity_match_source_active
+    ON rl_reciprocity_match(source_record_id)
+    WHERE match_status = 'ACTIVE';
 
-CREATE INDEX IF NOT EXISTS idx_ledger_record_user_type_occurred_on
-  ON ledger_record (user_id, record_type, occurred_on DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_rl_reciprocity_match_target_active
+    ON rl_reciprocity_match(target_record_id)
+    WHERE match_status = 'ACTIVE';
 
-CREATE INDEX IF NOT EXISTS idx_ledger_record_user_event
-  ON ledger_record (user_id, event_exchange_id, occurred_on DESC);
-
-CREATE TABLE IF NOT EXISTS user_refresh_token (
-  id                  BIGINT PRIMARY KEY,
-  user_id             BIGINT NOT NULL,
-  refresh_token       VARCHAR(128) NOT NULL,
-  device_info         VARCHAR(200),
-  expires_at          TIMESTAMPTZ NOT NULL,
-  revoked             BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT uq_user_refresh_token_token UNIQUE (refresh_token)
-);
-
-COMMENT ON TABLE user_refresh_token IS '用户刷新令牌表';
-COMMENT ON COLUMN user_refresh_token.id IS '主键ID（应用生成，非自增）';
-COMMENT ON COLUMN user_refresh_token.user_id IS '用户ID';
-COMMENT ON COLUMN user_refresh_token.refresh_token IS '刷新令牌';
-COMMENT ON COLUMN user_refresh_token.device_info IS '设备信息';
-COMMENT ON COLUMN user_refresh_token.expires_at IS '过期时间';
-COMMENT ON COLUMN user_refresh_token.revoked IS '是否已撤销';
-COMMENT ON COLUMN user_refresh_token.created_at IS '创建时间';
-COMMENT ON COLUMN user_refresh_token.updated_at IS '更新时间';
-
-CREATE INDEX IF NOT EXISTS idx_user_refresh_token_user_id
-  ON user_refresh_token (user_id, revoked, expires_at DESC);
-
-INSERT INTO event_type_dict(id, code, name, sort_order, enabled, built_in)
+INSERT INTO rl_event_type (id, type_code, type_name, sort_no, enabled_flag, built_in_flag, remark)
 VALUES
-  (1001, 'WEDDING', '婚礼', 10, TRUE, TRUE),
-  (1002, 'FUNERAL', '白事', 20, TRUE, TRUE),
-  (1003, 'BIRTHDAY', '生日', 30, TRUE, TRUE),
-  (1004, 'FULL_MONTH', '满月', 40, TRUE, TRUE),
-  (1005, 'HOUSEWARMING', '乔迁', 50, TRUE, TRUE),
-  (1006, 'NEW_YEAR', '拜年', 60, TRUE, TRUE),
-  (1999, 'OTHER', '其他', 999, TRUE, TRUE)
-ON CONFLICT (code) DO UPDATE
-SET name = EXCLUDED.name,
-    sort_order = EXCLUDED.sort_order,
-    enabled = EXCLUDED.enabled,
-    built_in = EXCLUDED.built_in,
-    updated_at = NOW();
-
-COMMIT;
+    ('1001', 'WEDDING', '结婚', 10, TRUE, TRUE, '系统预置事件类型'),
+    ('1002', 'BIRTH', '生子', 20, TRUE, TRUE, '系统预置事件类型'),
+    ('1003', 'FULL_MONTH', '满月', 30, TRUE, TRUE, '系统预置事件类型'),
+    ('1004', 'FIRST_BIRTHDAY', '周岁', 40, TRUE, TRUE, '系统预置事件类型'),
+    ('1005', 'HOUSEWARMING', '乔迁', 50, TRUE, TRUE, '系统预置事件类型'),
+    ('1006', 'BIRTHDAY', '生日', 60, TRUE, TRUE, '系统预置事件类型'),
+    ('1007', 'FUNERAL', '白事', 70, TRUE, TRUE, '系统预置事件类型'),
+    ('1008', 'ENTRANCE', '升学', 80, TRUE, TRUE, '系统预置事件类型'),
+    ('1009', 'FESTIVAL', '节日往来', 90, TRUE, TRUE, '系统预置事件类型'),
+    ('1010', 'OTHER', '其他', 100, TRUE, TRUE, '系统预置事件类型')
+ON CONFLICT (type_code) DO NOTHING;

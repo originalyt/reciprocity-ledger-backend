@@ -15,9 +15,8 @@ public class PageResponse<T> {
     private Integer pageNo;
     private Integer pageSize;
     private Long total;
-    private Boolean hasMore;
 
     public static <T> PageResponse<T> of(List<T> list, int pageNo, int pageSize, long total) {
-        return new PageResponse<>(list, pageNo, pageSize, total, (long) pageNo * pageSize < total);
+        return new PageResponse<>(list, pageNo, pageSize, total);
     }
 }

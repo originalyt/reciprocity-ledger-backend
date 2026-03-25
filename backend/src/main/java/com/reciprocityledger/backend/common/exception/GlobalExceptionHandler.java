@@ -31,7 +31,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ApiResponse<Void> handleException(Exception ex) {
-        log.error("Unhandled exception", ex);
+        log.error("系统异常", ex);
         return ApiResponse.failure(ErrorCode.SYSTEM_ERROR, "系统异常，请稍后重试");
     }
 }
