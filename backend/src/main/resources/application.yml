@@ -8,7 +8,7 @@ spring:
     password: ${DB_PASSWORD:123456}
 
 server:
-  port: 8080
+  port: 10086
 
 mybatis:
   type-aliases-package: com.reciprocityledger.backend
