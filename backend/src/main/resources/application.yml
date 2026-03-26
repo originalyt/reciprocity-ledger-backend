@@ -3,7 +3,7 @@ spring:
     name: reciprocity-ledger-backend
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/reciprocity_ledger}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/postgres}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:123456}
 

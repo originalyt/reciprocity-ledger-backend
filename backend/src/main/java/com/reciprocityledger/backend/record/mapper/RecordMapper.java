@@ -189,11 +189,11 @@ public interface RecordMapper {
             "select r.id, r.contact_id, r.event_id, r.direction, r.amount, r.record_date, r.remark, r.reciprocity_status, r.create_time, r.update_time",
             "from rl_gift_record r",
             "join rl_event e on e.id = r.event_id",
-            "where r.id &lt;&gt; #{recordId}",
+            "where r.id <> #{recordId}",
             "and r.contact_id = #{contactId}",
             "and e.event_type_id = #{eventTypeId}",
-            "and r.direction &lt;&gt; #{direction}",
-            "and e.event_owner_type &lt;&gt; #{eventOwnerType}",
+            "and r.direction <> #{direction}",
+            "and e.event_owner_type <> #{eventOwnerType}",
             "and r.reciprocity_status = 'UNMATCHED'",
             "and not exists (select 1 from rl_reciprocity_match m where m.match_status = 'ACTIVE' and (m.source_record_id = r.id or m.target_record_id = r.id))",
             "order by r.record_date desc, r.id desc",
@@ -205,3 +205,4 @@ public interface RecordMapper {
                                               @Param("direction") String direction,
                                               @Param("eventOwnerType") String eventOwnerType);
 }
+
