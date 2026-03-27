@@ -33,7 +33,7 @@ public interface EventTypeDictMapper {
 
     @Select({
             "<script>",
-            "select type_code as code, type_name as name from rl_event_type",
+            "select id as id, type_code as code, type_name as name from rl_event_type",
             "<where>",
             "  <if test='enabledFlag != null'>",
             "    enabled_flag = #{enabledFlag}",

@@ -19,12 +19,12 @@ import java.util.List;
 public class DictService {
 
     private static final List<DictItemResponse> RELATION_TYPES = Arrays.asList(
-            new DictItemResponse("RELATIVE", "亲戚"),
-            new DictItemResponse("FRIEND", "朋友"),
-            new DictItemResponse("COLLEAGUE", "同事"),
-            new DictItemResponse("CLASSMATE", "同学"),
-            new DictItemResponse("NEIGHBOR", "邻居"),
-            new DictItemResponse("OTHER", "其他")
+            new DictItemResponse("RELATIVE", "RELATIVE", "亲戚"),
+            new DictItemResponse("FRIEND", "FRIEND", "朋友"),
+            new DictItemResponse("COLLEAGUE", "COLLEAGUE", "同事"),
+            new DictItemResponse("CLASSMATE", "CLASSMATE", "同学"),
+            new DictItemResponse("NEIGHBOR", "NEIGHBOR", "邻居"),
+            new DictItemResponse("OTHER", "OTHER", "其他")
     );
 
     private final EventTypeDictMapper eventTypeDictMapper;

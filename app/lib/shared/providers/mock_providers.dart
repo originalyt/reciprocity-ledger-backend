@@ -1,56 +1,61 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
-import '../mock/mock_data.dart';
+import '../../core/network/api_client.dart';
 import '../models/ledger_models.dart';
+import '../repositories/api_ledger_repository.dart';
+import '../repositories/ledger_repository.dart';
+import '../repositories/mock_ledger_repository.dart';
 
-final homeOverviewProvider = Provider<HomeOverview>((ref) {
-  return MockLedgerData.homeOverview;
+final useMockDataProvider = Provider<bool>((ref) {
+  return const bool.fromEnvironment('USE_MOCK_DATA', defaultValue: false);
 });
 
-final recentContactsProvider = Provider<List<ContactOption>>((ref) {
-  return MockLedgerData.recentContacts;
+final apiClientProvider = Provider<ApiClient>((ref) {
+  return ApiClient();
 });
 
-final commonEventTypesProvider = Provider<List<String>>((ref) {
-  return MockLedgerData.commonEventTypes;
-});
-
-final timelineFilterProvider = StateProvider<RecordKind?>((ref) {
-  return null;
-});
-
-final timelineEntriesProvider = Provider<List<TimelineEntry>>((ref) {
-  return MockLedgerData.timelineEntries;
-});
-
-final filteredTimelineEntriesProvider = Provider<List<TimelineEntry>>((ref) {
-  final filter = ref.watch(timelineFilterProvider);
-  final all = ref.watch(timelineEntriesProvider);
-  if (filter == null) {
-    return all;
+final ledgerRepositoryProvider = Provider<LedgerRepository>((ref) {
+  if (ref.watch(useMockDataProvider)) {
+    return MockLedgerRepository();
   }
-  return all.where((item) => item.kind == filter).toList();
+  return ApiLedgerRepository(ref.watch(apiClientProvider));
 });
 
-final reciprocityFilterProvider = StateProvider<ReciprocityStatus>((ref) {
-  return ReciprocityStatus.waitMe;
+final homeOverviewProvider = FutureProvider<HomeOverview>((ref) {
+  return ref.watch(ledgerRepositoryProvider).fetchHomeOverview();
 });
 
-final reciprocityEventsProvider = Provider<List<ReciprocityEventSummary>>((ref) {
-  return MockLedgerData.reciprocityEvents;
+final contactsProvider = FutureProvider<List<ContactOption>>((ref) {
+  return ref.watch(ledgerRepositoryProvider).fetchContacts();
 });
 
-final filteredReciprocityEventsProvider = Provider<List<ReciprocityEventSummary>>((ref) {
+final timelineFilterProvider = StateProvider<RecordKind?>((ref) => null);
+
+final selfTimelineProvider = FutureProvider<TimelineBundle>((ref) {
+  final filter = ref.watch(timelineFilterProvider);
+  return ref.watch(ledgerRepositoryProvider).fetchSelfTimeline(kind: filter);
+});
+
+final reciprocityFilterProvider = StateProvider<ReciprocityStatus>((ref) => ReciprocityStatus.unmatched);
+
+final reciprocityListProvider = FutureProvider<List<ReciprocityEventSummary>>((ref) {
   final status = ref.watch(reciprocityFilterProvider);
-  final all = ref.watch(reciprocityEventsProvider);
-  return all.where((item) => item.status == status).toList();
+  return ref.watch(ledgerRepositoryProvider).fetchReciprocityList(status);
 });
 
-final contactDetailProvider = Provider.family<ContactDetail?, String>((ref, id) {
-  return MockLedgerData.findContactDetail(id);
+final contactDetailProvider = FutureProvider.family<ContactDetail, String>((ref, id) {
+  return ref.watch(ledgerRepositoryProvider).fetchContactDetail(id);
 });
 
-final reciprocityDetailProvider = Provider.family<ReciprocityDetail?, String>((ref, id) {
-  return MockLedgerData.findReciprocityDetail(id);
+final reciprocityDetailProvider = FutureProvider.family<ReciprocityDetail, String>((ref, id) {
+  return ref.watch(ledgerRepositoryProvider).fetchReciprocityDetail(id);
+});
+
+final eventTypesProvider = FutureProvider<List<EventTypeOption>>((ref) {
+  return ref.watch(ledgerRepositoryProvider).fetchEventTypes();
+});
+
+final eventOptionsProvider = FutureProvider.family<List<EventOption>, ({RecordKind kind, String? contactId})>((ref, args) {
+  return ref.watch(ledgerRepositoryProvider).fetchEventOptions(kind: args.kind, contactId: args.contactId);
 });

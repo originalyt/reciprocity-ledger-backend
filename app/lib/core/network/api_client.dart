@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import 'api_config.dart';
+import 'api_exception.dart';
 import 'api_response.dart';
 
 class ApiClient {
@@ -16,13 +17,22 @@ class ApiClient {
     contentType: Headers.jsonContentType,
   );
 
-  Future<ApiResponse<T>> post<T>(
+  Future<T> post<T>(
     String path,
     Map<String, dynamic> body,
     T Function(Object? json) fromJsonT,
   ) async {
-    final response = await _dio.post<Map<String, dynamic>>(path, data: body);
-    final payload = response.data ?? const <String, dynamic>{};
-    return ApiResponse.fromJson(payload, fromJsonT);
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(path, data: body);
+      final payload = response.data ?? const <String, dynamic>{};
+      final apiResponse = ApiResponse.fromJson(payload, fromJsonT);
+      if (apiResponse.code != 0) {
+        throw ApiException(code: apiResponse.code, message: apiResponse.message);
+      }
+      return apiResponse.data;
+    } on DioException catch (error) {
+      final message = error.message ?? '连接后端服务失败';
+      throw ApiException(code: -1, message: message);
+    }
   }
 }
