@@ -5,15 +5,9 @@ import '../../app/theme/ledger_theme_extension.dart';
 import '../../shared/models/ledger_models.dart';
 
 class LedgerStatusChip extends StatelessWidget {
-  const LedgerStatusChip.status({
-    super.key,
-    required this.status,
-  }) : kind = null;
+  const LedgerStatusChip.status({super.key, required this.status}) : kind = null;
 
-  const LedgerStatusChip.recordKind({
-    super.key,
-    required this.kind,
-  }) : status = null;
+  const LedgerStatusChip.recordKind({super.key, required this.kind}) : status = null;
 
   final ReciprocityStatus? status;
   final RecordKind? kind;
@@ -51,14 +45,14 @@ class LedgerStatusChip extends StatelessWidget {
     }
 
     switch (status!) {
-      case ReciprocityStatus.waitMe:
-        return _ChipStyle('我待回礼', statusTheme.waitMeSoft, statusTheme.waitMe);
-      case ReciprocityStatus.waitOther:
-        return _ChipStyle('待对方回礼', statusTheme.waitOtherSoft, statusTheme.waitOther);
-      case ReciprocityStatus.mutual:
-        return _ChipStyle('已互回', statusTheme.mutualSoft, statusTheme.mutual);
-      case ReciprocityStatus.noNeed:
-        return _ChipStyle('无需回礼', statusTheme.noNeedSoft, statusTheme.noNeed);
+      case ReciprocityStatus.unmatched:
+        return _ChipStyle('未闭环', statusTheme.waitMeSoft, statusTheme.waitMe);
+      case ReciprocityStatus.matched:
+        return _ChipStyle('已闭环', statusTheme.mutualSoft, statusTheme.mutual);
+      case ReciprocityStatus.manualConfirmed:
+        return _ChipStyle('人工确认', statusTheme.waitOtherSoft, statusTheme.waitOther);
+      case ReciprocityStatus.manualCanceled:
+        return _ChipStyle('已取消', statusTheme.noNeedSoft, statusTheme.noNeed);
     }
   }
 }

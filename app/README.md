@@ -2,22 +2,33 @@
 
 ## 当前状态
 
-当前目录已经提供一版 Flutter 客户端骨架，重点完成了：
-- 主题系统与基础颜色、卡片、按钮、标签风格
-- `go_router` 路由壳与底部导航
-- 首页、时间线、回礼清单、联系人详情、事件详情、新增记录页
-- 统一 mock 数据与后端 API 客户端占位
+当前目录已经提供一版 Flutter 客户端，并已接入后端真实接口。
+
+已接入的接口：
+- `/app/home/overview`
+- `/app/contact/page`
+- `/app/contact/detail`
+- `/app/record/self-timeline`
+- `/app/record/contact-timeline`
+- `/app/reciprocity/page`
+- `/app/reciprocity/detail`
+- `/app/dict/event-type/list`
+- `/app/event/page`
+- `/app/event/save`
+- `/app/record/save`
 
 ## 当前页面
 
 - `/home` 首页
 - `/timeline` 时间线
-- `/reciprocity` 回礼清单
+- `/reciprocity` 闭环列表
 - `/record/editor` 新增记录
 - `/contacts/:contactId` 联系人详情
-- `/reciprocity/:eventId` 回礼事件详情
+- `/reciprocity/:eventId` 闭环详情
 
 ## 运行方式
+
+默认使用真实后端：
 
 ```bash
 cd app
@@ -25,17 +36,34 @@ flutter pub get
 flutter run
 ```
 
-## 当前接入边界
+如果本地后端地址不是默认值，可以传：
 
-目前为了先把 UI 和页面流转跑通，页面使用的是本地 mock 数据。
-后续接后端时，优先替换这些模块：
-- `lib/shared/providers/mock_providers.dart`
-- `lib/shared/mock/mock_data.dart`
-- `lib/core/network/api_client.dart`
+```bash
+flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8080
+```
+
+如果只是看 UI，不连后端：
+
+```bash
+flutter run --dart-define=USE_MOCK_DATA=true
+```
+
+## 当前实现说明
+
+- App 默认优先连接真实后端。
+- 测试环境和纯 UI 预览环境可以切到 mock。
+- 新增记录页已经能直接调用真实接口保存。
+- 当选择“新建事件后保存记录”时，事件类型 ID 目前按 `backend/sql/baseline.sql` 中的内置事件类型映射处理。
+
+## 当前边界
+
+目前“事件类型列表”接口只返回 `code/name`，不返回 `eventTypeId`。
+因此前端为了走通 `/app/event/save`，临时使用了基线脚本里的内置类型 ID 映射。
+更稳妥的长期方案，是后端后续直接在事件类型列表接口中补回 `id` 字段。
 
 ## 建议下一步
 
-1. 把首页、回礼清单、联系人详情改为真实接口
-2. 为新增记录页接入 `/app/record/save`
-3. 增加联系人列表页与完整联系人选择页
-4. 为筛选条件、草稿恢复和错误态补完整状态管理
+1. 增加联系人列表页与联系人选择页
+2. 为新增记录页补“新建联系人”能力
+3. 增加闭环手工确认 / 手工取消操作
+4. 如要完全消除前端硬编码，补后端事件类型 `id` 返回字段
