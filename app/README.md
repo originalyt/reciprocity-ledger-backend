@@ -39,8 +39,11 @@ flutter run
 如果本地后端地址不是默认值，可以传：
 
 ```bash
-flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8080
+flutter run --dart-define=API_BASE_URL=http://127.0.0.1:10086
 ```
+
+Chrome 本地调试默认会回源到当前页面主机，并访问 `10086` 端口。
+例如页面运行在 `http://localhost:53421` 时，默认接口地址会是 `http://localhost:10086`。
 
 如果只是看 UI，不连后端：
 
@@ -53,6 +56,7 @@ flutter run --dart-define=USE_MOCK_DATA=true
 - App 默认优先连接真实后端。
 - 测试环境和纯 UI 预览环境可以切到 mock。
 - 新增记录页已经能直接调用真实接口保存。
+- Android 模拟器默认访问 `http://10.0.2.2:10086`，桌面端默认访问 `http://127.0.0.1:10086`。
 - 当选择“新建事件后保存记录”时，事件类型 ID 目前按 `backend/sql/baseline.sql` 中的内置事件类型映射处理。
 
 ## 当前边界

@@ -31,7 +31,9 @@ class ApiClient {
       }
       return apiResponse.data;
     } on DioException catch (error) {
-      final message = error.message ?? '连接后端服务失败';
+      final message =
+          error.message ??
+          '连接后端服务失败，请确认接口地址 ${ApiConfig.baseUrl} 可访问，且后端服务已启动';
       throw ApiException(code: -1, message: message);
     }
   }

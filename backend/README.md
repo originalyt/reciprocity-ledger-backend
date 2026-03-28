@@ -6,6 +6,8 @@
 1. 启动前配置 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD`
 2. 先执行 `sql/baseline.sql`
 3. 在 `backend/` 目录下运行 `mvn spring-boot:run`
+4. 服务默认监听 `10086` 端口
+5. 如需允许非本机调试来源访问，可通过 `APP_CORS_ALLOWED_ORIGIN_PATTERNS` 覆盖跨域白名单，默认值为 `http://localhost:*` 和 `http://127.0.0.1:*`
 
 ## 文档位置
 1. `doc/renqing-requirements-v1.md`

@@ -1,16 +1,21 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 
 class ApiConfig {
   ApiConfig._();
+
+  static const int _defaultPort = 10086;
 
   static String get baseUrl {
     const configured = String.fromEnvironment('API_BASE_URL', defaultValue: '');
     if (configured.isNotEmpty) {
       return configured;
     }
-    if (Platform.isAndroid) {
-      return 'http://10.0.2.2:8080';
+    if (kIsWeb) {
+      return '${Uri.base.scheme}://${Uri.base.host}:$_defaultPort';
     }
-    return 'http://127.0.0.1:8080';
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://10.0.2.2:$_defaultPort';
+    }
+    return 'http://127.0.0.1:$_defaultPort';
   }
 }

@@ -32,6 +32,9 @@ class HomePage extends ConsumerWidget {
           );
         },
         data: (overview) {
+          final hasRecentRecord = overview.recentRecords.isNotEmpty;
+          final recentContactId = hasRecentRecord ? overview.recentRecords.first.contactId : null;
+
           return CustomScrollView(
             slivers: [
               SliverPadding(
@@ -125,8 +128,8 @@ class HomePage extends ConsumerWidget {
                           _QuickActionTile(
                             icon: Icons.people_alt_outlined,
                             title: '联系人详情',
-                            subtitle: '查看联系人往来',
-                            onTap: () => context.push('/contacts/${overview.recentRecords.first.contactId}'),
+                            subtitle: hasRecentRecord ? '查看联系人往来' : '暂无最近联系人',
+                            onTap: recentContactId == null ? null : () => context.push('/contacts/$recentContactId'),
                           ),
                           _QuickActionTile(
                             icon: Icons.assignment_outlined,
@@ -201,11 +204,12 @@ class _QuickActionTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final disabled = onTap == null;
 
     return InkWell(
       borderRadius: BorderRadius.circular(18),
@@ -216,18 +220,20 @@ class _QuickActionTile extends StatelessWidget {
           color: theme.cardColor,
           borderRadius: BorderRadius.circular(18),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: theme.colorScheme.primary),
-            const Spacer(),
-            Text(title, style: theme.textTheme.titleMedium),
-            const SizedBox(height: 6),
-            Text(subtitle, style: theme.textTheme.bodyMedium),
-          ],
+        child: Opacity(
+          opacity: disabled ? 0.55 : 1,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: theme.colorScheme.primary),
+              const Spacer(),
+              Text(title, style: theme.textTheme.titleMedium),
+              const SizedBox(height: 6),
+              Text(subtitle, style: theme.textTheme.bodyMedium),
+            ],
+          ),
         ),
       ),
     );
   }
 }
-
