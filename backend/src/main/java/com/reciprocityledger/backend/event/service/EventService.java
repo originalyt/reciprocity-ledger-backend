@@ -100,8 +100,8 @@ public class EventService {
         EventByContactResponse response = new EventByContactResponse();
         response.setContactId(contactId);
         response.setContactName(contactService.getContactName(contactId));
-        response.setSelfEventList(eventMapper.selectByContact(contactId, null, null));
-        response.setContactEventList(eventMapper.selectByContact(null, contactId, null));
+        response.setSelfEventList(eventMapper.selectByContact("SELF", null));
+        response.setContactEventList(eventMapper.selectByContact("CONTACT", contactId));
         return response;
     }
 
