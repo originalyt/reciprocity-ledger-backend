@@ -22,4 +22,10 @@ abstract class LedgerRepository {
   Future<String> saveRecord(RecordSaveDraft draft);
 
   Future<String> saveContact(ContactSaveDraft draft);
+
+  Future<ContactQuickSaveResult> quickSaveContact(ContactSaveDraft draft);
+
+  Future<EventsByContact> eventsByContact(String contactId);
+
+  Future<String> saveRecordWithEvent(RecordSaveWithEventDraft draft);
 }

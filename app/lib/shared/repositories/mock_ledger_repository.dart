@@ -239,4 +239,54 @@ class MockLedgerRepository implements LedgerRepository {
     _contacts.add(ContactOption(id: id, name: draft.name, relation: draft.relationTypeCode));
     return id;
   }
+
+  @override
+  Future<ContactQuickSaveResult> quickSaveContact(ContactSaveDraft draft) async {
+    final id = 'mock-contact-${_contacts.length + 1}';
+    _contacts.add(ContactOption(id: id, name: draft.name, relation: draft.relationTypeCode));
+    return ContactQuickSaveResult(
+      contactId: id,
+      contactName: draft.name,
+      aliasName: draft.aliasName,
+      relationType: draft.relationTypeCode,
+    );
+  }
+
+  @override
+  Future<EventsByContact> eventsByContact(String contactId) async {
+    final contact = _contacts.firstWhere((item) => item.id == contactId, orElse: () => _contacts.first);
+    return EventsByContact(
+      contactId: contactId,
+      contactName: contact.name,
+      selfEventList: [
+        EventOption(
+          id: 'e2',
+          name: '我家乔迁',
+          eventTypeId: '1005',
+          eventTypeCode: 'HOUSEWARMING',
+          eventTypeName: '乔迁',
+          ownerType: 'SELF',
+          ownerContactId: null,
+          eventDate: DateTime(2026, 3, 16),
+        ),
+      ],
+      contactEventList: [
+        EventOption(
+          id: 'e1',
+          name: '张三结婚',
+          eventTypeId: '1001',
+          eventTypeCode: 'WEDDING',
+          eventTypeName: '结婚',
+          ownerType: 'CONTACT',
+          ownerContactId: contactId,
+          eventDate: DateTime(2026, 3, 18),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Future<String> saveRecordWithEvent(RecordSaveWithEventDraft draft) async {
+    return 'mock-record-id';
+  }
 }

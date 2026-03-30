@@ -426,3 +426,57 @@ class ContactSaveDraft {
   final String? mobile;
   final String? remark;
 }
+
+class ContactQuickSaveResult {
+  const ContactQuickSaveResult({
+    required this.contactId,
+    required this.contactName,
+    this.aliasName,
+    this.relationType,
+  });
+
+  final String contactId;
+  final String contactName;
+  final String? aliasName;
+  final String? relationType;
+}
+
+class EventsByContact {
+  const EventsByContact({
+    required this.contactId,
+    required this.contactName,
+    required this.selfEventList,
+    required this.contactEventList,
+  });
+
+  final String contactId;
+  final String contactName;
+  final List<EventOption> selfEventList;
+  final List<EventOption> contactEventList;
+}
+
+class RecordSaveWithEventDraft {
+  const RecordSaveWithEventDraft({
+    required this.contactId,
+    required this.kind,
+    required this.recordDate,
+    required this.amount,
+    required this.recordRemark,
+    required this.eventName,
+    required this.eventTypeId,
+    required this.eventOwnerType,
+    this.ownerContactId,
+    this.eventRemark,
+  });
+
+  final String contactId;
+  final RecordKind kind;
+  final DateTime recordDate;
+  final double amount;
+  final String recordRemark;
+  final String eventName;
+  final String eventTypeId;
+  final String eventOwnerType;
+  final String? ownerContactId;
+  final String? eventRemark;
+}

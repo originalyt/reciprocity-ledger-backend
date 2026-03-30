@@ -10,6 +10,7 @@ import com.reciprocityledger.backend.common.exception.BusinessException;
 import com.reciprocityledger.backend.common.exception.ErrorCode;
 import com.reciprocityledger.backend.common.id.IdGenerator;
 import com.reciprocityledger.backend.common.util.PageUtils;
+import com.reciprocityledger.backend.contact.entity.Contact;
 import com.reciprocityledger.backend.contact.service.ContactService;
 import com.reciprocityledger.backend.event.entity.GiftEvent;
 import com.reciprocityledger.backend.event.service.EventService;
@@ -17,11 +18,14 @@ import com.reciprocityledger.backend.reciprocity.service.ReciprocityService;
 import com.reciprocityledger.backend.record.dto.request.ContactTimelineRequest;
 import com.reciprocityledger.backend.record.dto.request.RecordDetailRequest;
 import com.reciprocityledger.backend.record.dto.request.RecordPageRequest;
+import com.reciprocityledger.backend.record.dto.request.RecordQuickSaveContactRequest;
 import com.reciprocityledger.backend.record.dto.request.RecordSaveRequest;
+import com.reciprocityledger.backend.record.dto.request.RecordSaveWithEventRequest;
 import com.reciprocityledger.backend.record.dto.request.RecordUpdateRequest;
 import com.reciprocityledger.backend.record.dto.request.SelfTimelineRequest;
 import com.reciprocityledger.backend.record.dto.response.RecordDetailResponse;
 import com.reciprocityledger.backend.record.dto.response.RecordPageItemResponse;
+import com.reciprocityledger.backend.record.dto.response.RecordQuickSaveContactResponse;
 import com.reciprocityledger.backend.record.dto.response.TimelineResponse;
 import com.reciprocityledger.backend.record.dto.response.TimelineSummaryResponse;
 import com.reciprocityledger.backend.record.entity.GiftRecord;
@@ -96,6 +100,27 @@ public class RecordService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    public IdResponse saveWithEvent(RecordSaveWithEventRequest request) {
+        contactService.requireContact(request.getContactId());
+        IdResponse eventResponse = eventService.quickSave(
+                request.getEventName(),
+                request.getEventTypeId(),
+                request.getEventOwnerType(),
+                request.getOwnerContactId(),
+                request.getEventDate(),
+                request.getEventRemark()
+        );
+        RecordSaveRequest saveRequest = new RecordSaveRequest();
+        saveRequest.setContactId(request.getContactId());
+        saveRequest.setEventId(eventResponse.getId());
+        saveRequest.setDirection(request.getDirection());
+        saveRequest.setAmount(request.getAmount());
+        saveRequest.setRecordDate(request.getRecordDate());
+        saveRequest.setRemark(request.getRecordRemark());
+        return save(saveRequest);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
     public IdResponse update(RecordUpdateRequest request) {
         GiftRecord record = requireRecord(request.getRecordId());
         contactService.requireContact(request.getContactId());
@@ -129,6 +154,17 @@ public class RecordService {
             throw new BusinessException(ErrorCode.RECORD_NOT_FOUND, "记录不存在");
         }
         return record;
+    }
+
+    public RecordQuickSaveContactResponse quickSaveContact(RecordQuickSaveContactRequest request) {
+        IdResponse response = contactService.quickSave(request);
+        Contact contact = contactService.requireContact(response.getId());
+        return new RecordQuickSaveContactResponse(
+                contact.getId(),
+                contact.getContactName(),
+                contact.getAliasName(),
+                contact.getRelationType()
+        );
     }
 
     private TimelineResponse buildTimeline(String contactId, String direction, String eventTypeCode, java.time.LocalDate startDate, java.time.LocalDate endDate, Integer pageNoValue, Integer pageSizeValue) {

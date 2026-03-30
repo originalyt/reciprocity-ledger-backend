@@ -6,11 +6,14 @@ import com.reciprocityledger.backend.common.api.PageResponse;
 import com.reciprocityledger.backend.record.dto.request.ContactTimelineRequest;
 import com.reciprocityledger.backend.record.dto.request.RecordDetailRequest;
 import com.reciprocityledger.backend.record.dto.request.RecordPageRequest;
+import com.reciprocityledger.backend.record.dto.request.RecordQuickSaveContactRequest;
 import com.reciprocityledger.backend.record.dto.request.RecordSaveRequest;
+import com.reciprocityledger.backend.record.dto.request.RecordSaveWithEventRequest;
 import com.reciprocityledger.backend.record.dto.request.RecordUpdateRequest;
 import com.reciprocityledger.backend.record.dto.request.SelfTimelineRequest;
 import com.reciprocityledger.backend.record.dto.response.RecordDetailResponse;
 import com.reciprocityledger.backend.record.dto.response.RecordPageItemResponse;
+import com.reciprocityledger.backend.record.dto.response.RecordQuickSaveContactResponse;
 import com.reciprocityledger.backend.record.dto.response.TimelineResponse;
 import com.reciprocityledger.backend.record.service.RecordService;
 import jakarta.validation.Valid;
@@ -40,9 +43,19 @@ public class RecordController {
         return ApiResponse.success(recordService.save(request));
     }
 
+    @PostMapping("/app/record/save-with-event")
+    public ApiResponse<IdResponse> saveWithEvent(@Valid @RequestBody RecordSaveWithEventRequest request) {
+        return ApiResponse.success(recordService.saveWithEvent(request));
+    }
+
     @PostMapping("/app/record/update")
     public ApiResponse<IdResponse> update(@Valid @RequestBody RecordUpdateRequest request) {
         return ApiResponse.success(recordService.update(request));
+    }
+
+    @PostMapping("/app/record/quick-save-contact")
+    public ApiResponse<RecordQuickSaveContactResponse> quickSaveContact(@Valid @RequestBody RecordQuickSaveContactRequest request) {
+        return ApiResponse.success(recordService.quickSaveContact(request));
     }
 
     @PostMapping("/app/record/self-timeline")

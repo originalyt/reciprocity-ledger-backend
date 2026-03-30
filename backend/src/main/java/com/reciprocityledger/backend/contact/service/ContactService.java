@@ -16,6 +16,7 @@ import com.reciprocityledger.backend.contact.dto.response.ContactDetailResponse;
 import com.reciprocityledger.backend.contact.dto.response.ContactPageItemResponse;
 import com.reciprocityledger.backend.contact.entity.Contact;
 import com.reciprocityledger.backend.contact.mapper.ContactMapper;
+import com.reciprocityledger.backend.record.dto.request.RecordQuickSaveContactRequest;
 import com.reciprocityledger.backend.record.mapper.RecordMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -82,6 +83,29 @@ public class ContactService {
             throw new BusinessException(ErrorCode.CONTACT_NOT_FOUND, "联系人不存在");
         }
         return contact;
+    }
+
+    public String getContactName(String contactId) {
+        Contact contact = contactMapper.selectById(contactId);
+        if (contact == null) {
+            throw new BusinessException(ErrorCode.CONTACT_NOT_FOUND, "联系人不存在");
+        }
+        return contact.getContactName();
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public IdResponse quickSave(RecordQuickSaveContactRequest request) {
+        Contact contact = new Contact();
+        contact.setId(idGenerator.nextId());
+        contact.setContactName(normalizeRequired(request.getContactName(), "contactName不能为空", 64));
+        contact.setAliasName(normalizeNullableLength(request.getAliasName(), 64));
+        contact.setSalutation(normalizeNullableLength(request.getSalutation(), 64));
+        contact.setMobile(normalizeMobile(request.getMobile()));
+        contact.setRelationType(normalizeNullableLength(request.getRelationType(), 32));
+        contact.setRemark(normalizeNullableLength(request.getRemark(), 500));
+        contact.setStatus("NORMAL");
+        contactMapper.insert(contact);
+        return new IdResponse(contact.getId());
     }
 
     private ContactDetailResponse buildDetail(Contact contact) {

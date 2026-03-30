@@ -15,6 +15,7 @@ import com.reciprocityledger.backend.event.dto.request.EventDetailRequest;
 import com.reciprocityledger.backend.event.dto.request.EventPageRequest;
 import com.reciprocityledger.backend.event.dto.request.EventSaveRequest;
 import com.reciprocityledger.backend.event.dto.request.EventUpdateRequest;
+import com.reciprocityledger.backend.event.dto.response.EventByContactResponse;
 import com.reciprocityledger.backend.event.dto.response.EventDetailResponse;
 import com.reciprocityledger.backend.event.dto.response.EventPageItemResponse;
 import com.reciprocityledger.backend.event.entity.GiftEvent;
@@ -65,6 +66,16 @@ public class EventService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    public IdResponse quickSave(String eventName, String eventTypeId, String eventOwnerType, String ownerContactId, java.time.LocalDate eventDate, String remark) {
+        GiftEvent event = new GiftEvent();
+        event.setId(idGenerator.nextId());
+        fillEvent(event, eventName, eventTypeId, eventOwnerType, ownerContactId, eventDate, remark);
+        event.setStatus("NORMAL");
+        eventMapper.insert(event);
+        return new IdResponse(event.getId());
+    }
+
+    @Transactional(rollbackFor = Exception.class)
     public IdResponse update(EventUpdateRequest request) {
         GiftEvent event = requireEvent(request.getEventId());
         fillEvent(event, request.getEventName(), request.getEventTypeId(), request.getEventOwnerType(), request.getOwnerContactId(), request.getEventDate(), request.getRemark());
@@ -82,6 +93,16 @@ public class EventService {
 
     public List<EventPageItemResponse> recentEvents(int limit) {
         return eventMapper.selectRecent(limit);
+    }
+
+    public EventByContactResponse eventsByContact(String contactId) {
+        contactService.requireContact(contactId);
+        EventByContactResponse response = new EventByContactResponse();
+        response.setContactId(contactId);
+        response.setContactName(contactService.getContactName(contactId));
+        response.setSelfEventList(eventMapper.selectByContact(contactId, null, null));
+        response.setContactEventList(eventMapper.selectByContact(null, contactId, null));
+        return response;
     }
 
     private EventDetailResponse buildDetail(GiftEvent event) {

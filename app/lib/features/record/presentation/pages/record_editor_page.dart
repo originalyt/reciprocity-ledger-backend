@@ -8,6 +8,7 @@ import '../../../../core/widgets/ledger_primary_button.dart';
 import '../../../../core/widgets/ledger_section_card.dart';
 import '../../../../shared/models/ledger_models.dart';
 import '../../../../shared/providers/mock_providers.dart';
+import '../widgets/quick_add_contact_dialog.dart';
 
 class RecordEditorPage extends ConsumerStatefulWidget {
   const RecordEditorPage({super.key, this.initialKind, this.initialContactId});
@@ -53,7 +54,6 @@ class _RecordEditorPageState extends ConsumerState<RecordEditorPage> {
   Widget build(BuildContext context) {
     final contactsAsync = ref.watch(contactsProvider);
     final eventTypesAsync = ref.watch(eventTypesProvider);
-    final eventOptionsAsync = ref.watch(eventOptionsProvider((kind: _selectedKind, contactId: _selectedContactId)));
 
     return Scaffold(
       appBar: AppBar(title: const Text('新增记录')),
@@ -73,6 +73,10 @@ class _RecordEditorPageState extends ConsumerState<RecordEditorPage> {
             _selectedContactId = contacts.first.id;
           }
 
+          final eventsByContactAsync = _selectedContactId == null
+              ? null
+              : ref.watch(eventsByContactProvider(_selectedContactId!));
+
           return Form(
             key: _formKey,
             child: ListView(
@@ -81,6 +85,11 @@ class _RecordEditorPageState extends ConsumerState<RecordEditorPage> {
                 LedgerSectionCard(
                   title: '联系人',
                   subtitle: '接口：/app/contact/page',
+                  trailing: TextButton.icon(
+                    onPressed: _showQuickAddContact,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('新建'),
+                  ),
                   child: Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -140,7 +149,13 @@ class _RecordEditorPageState extends ConsumerState<RecordEditorPage> {
                       ),
                       const SizedBox(height: 8),
                       if (!_createNewEvent)
-                        eventOptionsAsync.when(
+                        if (eventsByContactAsync == null)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            child: Text('请先选择联系人'),
+                          )
+                        else
+                          eventsByContactAsync!.when(
                           loading: () => const Padding(
                             padding: EdgeInsets.symmetric(vertical: 12),
                             child: CircularProgressIndicator(),
@@ -149,24 +164,40 @@ class _RecordEditorPageState extends ConsumerState<RecordEditorPage> {
                             final message = error is ApiException ? error.message : '事件加载失败';
                             return Text(message, style: Theme.of(context).textTheme.bodyMedium);
                           },
-                          data: (events) {
-                            if (events.isEmpty) {
-                              return const Text('当前没有可选事件，请打开“新建事件后保存记录”。');
+                          data: (eventsByContact) {
+                            final showSelfEvents = _selectedKind == RecordKind.receive;
+                            final showContactEvents = _selectedKind == RecordKind.give;
+                            final eventsToShow = showSelfEvents ? eventsByContact.selfEventList : eventsByContact.contactEventList;
+
+                            if (eventsToShow.isEmpty) {
+                              return const Text('当前没有可选事件，请打开"新建事件后保存记录"。');
                             }
-                            return Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: events.map((event) {
-                                return ChoiceChip(
-                                  label: Text('${event.eventTypeName} · ${event.name}'),
-                                  selected: _selectedExistingEventId == event.id,
-                                  onSelected: (_) {
-                                    setState(() {
-                                      _selectedExistingEventId = event.id;
-                                    });
-                                  },
-                                );
-                              }).toList(),
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (eventsByContact.selfEventList.isNotEmpty && eventsByContact.contactEventList.isNotEmpty) ...[
+                                  Text(
+                                    showSelfEvents ? '本人事件' : '联系人事件',
+                                    style: Theme.of(context).textTheme.titleSmall,
+                                  ),
+                                  const SizedBox(height: 8),
+                                ],
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: eventsToShow.map((event) {
+                                    return ChoiceChip(
+                                      label: Text('${event.eventTypeName} · ${event.name}'),
+                                      selected: _selectedExistingEventId == event.id,
+                                      onSelected: (_) {
+                                        setState(() {
+                                          _selectedExistingEventId = event.id;
+                                        });
+                                      },
+                                    );
+                                  }).toList(),
+                                ),
+                              ],
                             );
                           },
                         ),
@@ -289,6 +320,18 @@ class _RecordEditorPageState extends ConsumerState<RecordEditorPage> {
     }
   }
 
+  Future<void> _showQuickAddContact() async {
+    final result = await showDialog<ContactQuickSaveResult>(
+      context: context,
+      builder: (context) => const QuickAddContactDialog(),
+    );
+    if (result != null) {
+      setState(() {
+        _selectedContactId = result.contactId;
+      });
+    }
+  }
+
   Future<void> _submit() async {
     if (_selectedContactId == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('请先选择联系人')));
@@ -314,18 +357,36 @@ class _RecordEditorPageState extends ConsumerState<RecordEditorPage> {
 
     try {
       final repository = ref.read(ledgerRepositoryProvider);
-      await repository.saveRecord(
-        RecordSaveDraft(
-          contactId: _selectedContactId!,
-          kind: _selectedKind,
-          recordDate: _selectedDate,
-          amount: amount,
-          recordRemark: _remarkController.text.trim(),
-          existingEventId: _createNewEvent ? null : _selectedExistingEventId,
-          newEventName: _createNewEvent ? _eventNameController.text.trim() : null,
-          newEventType: _createNewEvent ? _selectedEventType : null,
-        ),
-      );
+      final String recordId;
+      if (_createNewEvent) {
+        recordId = await repository.saveRecordWithEvent(
+          RecordSaveWithEventDraft(
+            contactId: _selectedContactId!,
+            kind: _selectedKind,
+            recordDate: _selectedDate,
+            amount: amount,
+            recordRemark: _remarkController.text.trim(),
+            eventName: _eventNameController.text.trim(),
+            eventTypeId: _selectedEventType!.id,
+            eventOwnerType: _selectedKind.eventOwnerType,
+            ownerContactId: _selectedKind == RecordKind.give ? _selectedContactId : null,
+            eventRemark: '',
+          ),
+        );
+      } else {
+        recordId = await repository.saveRecord(
+          RecordSaveDraft(
+            contactId: _selectedContactId!,
+            kind: _selectedKind,
+            recordDate: _selectedDate,
+            amount: amount,
+            recordRemark: _remarkController.text.trim(),
+            existingEventId: _selectedExistingEventId,
+            newEventName: null,
+            newEventType: null,
+          ),
+        );
+      }
 
       if (!mounted) {
         return;

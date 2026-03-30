@@ -56,6 +56,14 @@ final eventTypesProvider = FutureProvider<List<EventTypeOption>>((ref) {
   return ref.watch(ledgerRepositoryProvider).fetchEventTypes();
 });
 
+final relationTypesProvider = FutureProvider<List<RelationTypeOption>>((ref) {
+  return ref.watch(ledgerRepositoryProvider).fetchRelationTypes();
+});
+
 final eventOptionsProvider = FutureProvider.family<List<EventOption>, ({RecordKind kind, String? contactId})>((ref, args) {
   return ref.watch(ledgerRepositoryProvider).fetchEventOptions(kind: args.kind, contactId: args.contactId);
+});
+
+final eventsByContactProvider = FutureProvider.family<EventsByContact, String>((ref, contactId) {
+  return ref.watch(ledgerRepositoryProvider).eventsByContact(contactId);
 });

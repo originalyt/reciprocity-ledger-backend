@@ -230,6 +230,57 @@ class ApiLedgerRepository implements LedgerRepository {
     return _stringValue(result['id']);
   }
 
+  @override
+  Future<ContactQuickSaveResult> quickSaveContact(ContactSaveDraft draft) async {
+    final result = await _client.post('/app/record/quick-save-contact', {
+      'contactName': draft.name,
+      'aliasName': draft.aliasName,
+      'salutation': draft.salutation,
+      'mobile': draft.mobile,
+      'relationType': draft.relationTypeCode,
+      'remark': draft.remark,
+    }, (json) => _asMap(json));
+    return ContactQuickSaveResult(
+      contactId: _stringValue(result['contactId']),
+      contactName: _stringValue(result['contactName']),
+      aliasName: _nullableString(result['aliasName']),
+      relationType: _nullableString(result['relationType']),
+    );
+  }
+
+  @override
+  Future<EventsByContact> eventsByContact(String contactId) async {
+    return _client.post('/app/event/by-contact', {'contactId': contactId}, (json) {
+      final map = _asMap(json);
+      final selfEventList = _asList(map['selfEventList']).map((item) => _eventOptionFromJson(_asMap(item))).toList();
+      final contactEventList = _asList(map['contactEventList']).map((item) => _eventOptionFromJson(_asMap(item))).toList();
+      return EventsByContact(
+        contactId: _stringValue(map['contactId']),
+        contactName: _stringValue(map['contactName']),
+        selfEventList: selfEventList,
+        contactEventList: contactEventList,
+      );
+    });
+  }
+
+  @override
+  Future<String> saveRecordWithEvent(RecordSaveWithEventDraft draft) async {
+    final result = await _client.post('/app/record/save-with-event', {
+      'contactId': draft.contactId,
+      'eventName': draft.eventName,
+      'eventTypeId': draft.eventTypeId,
+      'eventOwnerType': draft.eventOwnerType,
+      'ownerContactId': draft.ownerContactId,
+      'eventDate': _dateString(draft.recordDate),
+      'eventRemark': draft.eventRemark ?? '',
+      'direction': draft.kind.backendDirection,
+      'amount': draft.amount.toStringAsFixed(2),
+      'recordDate': _dateString(draft.recordDate),
+      'recordRemark': draft.recordRemark,
+    }, (json) => _asMap(json));
+    return _stringValue(result['id']);
+  }
+
   Future<String> _createEvent(RecordSaveDraft draft) async {
     final eventType = draft.newEventType;
     if (eventType == null) {
@@ -263,6 +314,19 @@ class ApiLedgerRepository implements LedgerRepository {
       amount: _doubleValue(map['amount']),
       recordDate: _dateValue(map['recordDate']),
       reciprocityStatus: parseReciprocityStatus(map['reciprocityStatus']?.toString()),
+    );
+  }
+
+  EventOption _eventOptionFromJson(Map<String, dynamic> map) {
+    return EventOption(
+      id: _stringValue(map['eventId'] ?? map['id']),
+      name: _stringValue(map['eventName']),
+      eventTypeId: _stringValue(map['eventTypeId']),
+      eventTypeCode: _stringValue(map['eventTypeCode']),
+      eventTypeName: _stringValue(map['eventTypeName']),
+      ownerType: _stringValue(map['eventOwnerType']),
+      ownerContactId: _nullableString(map['ownerContactId']),
+      eventDate: _dateValue(map['eventDate']),
     );
   }
 

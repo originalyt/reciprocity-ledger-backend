@@ -1,5 +1,6 @@
 package com.reciprocityledger.backend.event.mapper;
 
+import com.reciprocityledger.backend.event.dto.response.EventByContactItemResponse;
 import com.reciprocityledger.backend.event.dto.response.EventPageItemResponse;
 import com.reciprocityledger.backend.event.entity.GiftEvent;
 import org.apache.ibatis.annotations.Insert;
@@ -113,4 +114,25 @@ public interface EventMapper {
 
     @Select("select e.id as event_id, e.event_name, e.event_type_id, t.type_code as event_type_code, t.type_name as event_type_name, e.event_owner_type, e.owner_contact_id, c.contact_name as owner_contact_name, e.event_date, 0 as record_count from rl_event e join rl_event_type t on t.id = e.event_type_id left join rl_contact c on c.id = e.owner_contact_id where e.status = 'NORMAL' order by e.event_date desc, e.id desc limit #{limit}")
     List<EventPageItemResponse> selectRecent(@Param("limit") int limit);
+
+    @Select({
+            "<script>",
+            "select e.id as event_id, e.event_name, e.event_type_id, t.type_code as event_type_code, t.type_name as event_type_name,",
+            "e.event_owner_type, e.owner_contact_id, c.contact_name as owner_contact_name, e.event_date, 0 as record_count",
+            "from rl_event e",
+            "join rl_event_type t on t.id = e.event_type_id",
+            "left join rl_contact c on c.id = e.owner_contact_id",
+            "<where>",
+            "  e.status = 'NORMAL'",
+            "  <if test='eventOwnerType != null and eventOwnerType != \"\"'>",
+            "    and e.event_owner_type = #{eventOwnerType}",
+            "  </if>",
+            "  <if test='ownerContactId != null and ownerContactId != \"\"'>",
+            "    and e.owner_contact_id = #{ownerContactId}",
+            "  </if>",
+            "</where>",
+            "order by e.event_date desc, e.id desc",
+            "</script>"
+    })
+    List<EventByContactItemResponse> selectByContact(@Param("eventOwnerType") String eventOwnerType, @Param("ownerContactId") String ownerContactId);
 }

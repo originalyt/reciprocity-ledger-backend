@@ -3,10 +3,12 @@ package com.reciprocityledger.backend.event;
 import com.reciprocityledger.backend.common.api.ApiResponse;
 import com.reciprocityledger.backend.common.api.IdResponse;
 import com.reciprocityledger.backend.common.api.PageResponse;
+import com.reciprocityledger.backend.event.dto.request.EventByContactRequest;
 import com.reciprocityledger.backend.event.dto.request.EventDetailRequest;
 import com.reciprocityledger.backend.event.dto.request.EventPageRequest;
 import com.reciprocityledger.backend.event.dto.request.EventSaveRequest;
 import com.reciprocityledger.backend.event.dto.request.EventUpdateRequest;
+import com.reciprocityledger.backend.event.dto.response.EventByContactResponse;
 import com.reciprocityledger.backend.event.dto.response.EventDetailResponse;
 import com.reciprocityledger.backend.event.dto.response.EventPageItemResponse;
 import com.reciprocityledger.backend.event.service.EventService;
@@ -40,5 +42,10 @@ public class EventController {
     @PostMapping("/app/event/update")
     public ApiResponse<IdResponse> update(@Valid @RequestBody EventUpdateRequest request) {
         return ApiResponse.success(eventService.update(request));
+    }
+
+    @PostMapping("/app/event/by-contact")
+    public ApiResponse<EventByContactResponse> byContact(@Valid @RequestBody EventByContactRequest request) {
+        return ApiResponse.success(eventService.eventsByContact(request.getContactId()));
     }
 }
