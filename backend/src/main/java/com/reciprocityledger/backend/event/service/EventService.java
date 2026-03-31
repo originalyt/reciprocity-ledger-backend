@@ -21,6 +21,7 @@ import com.reciprocityledger.backend.event.dto.response.EventPageItemResponse;
 import com.reciprocityledger.backend.event.entity.GiftEvent;
 import com.reciprocityledger.backend.event.mapper.EventMapper;
 import com.reciprocityledger.backend.record.mapper.RecordMapper;
+import com.reciprocityledger.backend.user.context.UserContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,8 +46,9 @@ public class EventService {
         String eventTypeCode = normalizeNullable(request.getEventTypeCode());
         String eventOwnerType = normalizeNullable(request.getEventOwnerType());
         String ownerContactId = normalizeNullable(request.getOwnerContactId());
-        long total = eventMapper.countPage(keyword, eventTypeCode, eventOwnerType, ownerContactId, request.getStartDate(), request.getEndDate());
-        List<EventPageItemResponse> list = eventMapper.selectPage(keyword, eventTypeCode, eventOwnerType, ownerContactId, request.getStartDate(), request.getEndDate(), PageUtils.offset(pageNo, pageSize), pageSize);
+        String userId = UserContext.getUserId();
+        long total = eventMapper.countPage(keyword, eventTypeCode, eventOwnerType, ownerContactId, request.getStartDate(), request.getEndDate(), userId);
+        List<EventPageItemResponse> list = eventMapper.selectPage(keyword, eventTypeCode, eventOwnerType, ownerContactId, request.getStartDate(), request.getEndDate(), userId, PageUtils.offset(pageNo, pageSize), pageSize);
         return PageResponse.of(list, pageNo, pageSize, total);
     }
 
@@ -61,6 +63,7 @@ public class EventService {
         event.setId(idGenerator.nextId());
         fillEvent(event, request.getEventName(), request.getEventTypeId(), request.getEventOwnerType(), request.getOwnerContactId(), request.getEventDate(), request.getRemark());
         event.setStatus("NORMAL");
+        event.setUserId(UserContext.getUserId());
         eventMapper.insert(event);
         return new IdResponse(event.getId());
     }
@@ -71,6 +74,7 @@ public class EventService {
         event.setId(idGenerator.nextId());
         fillEvent(event, eventName, eventTypeId, eventOwnerType, ownerContactId, eventDate, remark);
         event.setStatus("NORMAL");
+        event.setUserId(UserContext.getUserId());
         eventMapper.insert(event);
         return new IdResponse(event.getId());
     }
@@ -88,6 +92,10 @@ public class EventService {
         if (event == null) {
             throw new BusinessException(ErrorCode.EVENT_NOT_FOUND, "事件不存在");
         }
+        String userId = UserContext.getUserId();
+        if (!userId.equals(event.getUserId())) {
+            throw new BusinessException(ErrorCode.EVENT_NOT_FOUND, "事件不存在");
+        }
         return event;
     }
 
@@ -95,13 +103,18 @@ public class EventService {
         return eventMapper.selectRecent(limit);
     }
 
+    public List<EventPageItemResponse> recentEventsByUserId(String userId, int limit) {
+        return eventMapper.selectRecentByUserId(userId, limit);
+    }
+
     public EventByContactResponse eventsByContact(String contactId) {
         contactService.requireContact(contactId);
         EventByContactResponse response = new EventByContactResponse();
         response.setContactId(contactId);
         response.setContactName(contactService.getContactName(contactId));
-        response.setSelfEventList(eventMapper.selectByContact("SELF", null));
-        response.setContactEventList(eventMapper.selectByContact("CONTACT", contactId));
+        String userId = UserContext.getUserId();
+        response.setSelfEventList(eventMapper.selectByContact(userId, "SELF", null));
+        response.setContactEventList(eventMapper.selectByContact(userId, "CONTACT", contactId));
         return response;
     }
 
@@ -121,11 +134,12 @@ public class EventService {
             response.setOwnerContactName(summary.getOwnerContactName());
             response.setRecordCount(summary.getRecordCount());
         }
-        BigDecimal receiveTotal = recordMapper.sumAmountByEventAndDirection(event.getId(), "RECEIVE");
-        BigDecimal sendTotal = recordMapper.sumAmountByEventAndDirection(event.getId(), "SEND");
+        String userId = UserContext.getUserId();
+        BigDecimal receiveTotal = recordMapper.sumAmountByEventAndDirectionAndUserId(event.getId(), "RECEIVE", userId);
+        BigDecimal sendTotal = recordMapper.sumAmountByEventAndDirectionAndUserId(event.getId(), "SEND", userId);
         response.setReceiveTotalAmount(receiveTotal == null ? BigDecimal.ZERO : receiveTotal);
         response.setSendTotalAmount(sendTotal == null ? BigDecimal.ZERO : sendTotal);
-        Long contactCount = recordMapper.countDistinctContactByEventId(event.getId());
+        Long contactCount = recordMapper.countDistinctContactByEventIdAndUserId(event.getId(), userId);
         response.setContactCount(contactCount == null ? 0L : contactCount);
         return response;
     }

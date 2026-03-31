@@ -4,13 +4,13 @@ import '../models/ledger_models.dart';
 import 'ledger_repository.dart';
 
 class ApiLedgerRepository implements LedgerRepository {
-  ApiLedgerRepository(this._client);
+  ApiLedgerRepository(this._apiClient);
 
-  final ApiClient _client;
+  final ApiClient _apiClient;
 
   @override
   Future<HomeOverview> fetchHomeOverview() async {
-    return _client.post('/app/home/overview', {}, (json) {
+    return _apiClient.post('/app/home/overview', {}, fromJsonT: (json) {
       final map = _asMap(json);
       return HomeOverview(
         totalGive: _doubleValue(map['sendTotalAmount']),
@@ -23,11 +23,11 @@ class ApiLedgerRepository implements LedgerRepository {
 
   @override
   Future<List<ContactOption>> fetchContacts({String? keyword, int pageNo = 1, int pageSize = 50}) async {
-    return _client.post('/app/contact/page', {
+    return _apiClient.post('/app/contact/page', {
       'keyword': keyword,
       'pageNo': pageNo,
       'pageSize': pageSize,
-    }, (json) {
+    }, fromJsonT: (json) {
       final page = _asMap(json);
       return _asList(page['list']).map((item) {
         final map = _asMap(item);
@@ -42,12 +42,12 @@ class ApiLedgerRepository implements LedgerRepository {
 
   @override
   Future<ContactDetail> fetchContactDetail(String contactId) async {
-    final detail = await _client.post('/app/contact/detail', {'contactId': contactId}, (json) => _asMap(json));
-    final timeline = await _client.post('/app/record/contact-timeline', {
+    final detail = await _apiClient.post('/app/contact/detail', {'contactId': contactId}, fromJsonT: (json) => _asMap(json));
+    final timeline = await _apiClient.post('/app/record/contact-timeline', {
       'contactId': contactId,
       'pageNo': 1,
       'pageSize': 20,
-    }, (json) => _asMap(json));
+    }, fromJsonT: (json) => _asMap(json));
 
     final timelineItems = _asList(_asMap(timeline['pageResult'])['list']).map((item) {
       final map = _asMap(item);
@@ -71,11 +71,11 @@ class ApiLedgerRepository implements LedgerRepository {
 
   @override
   Future<TimelineBundle> fetchSelfTimeline({RecordKind? kind, int pageNo = 1, int pageSize = 50}) async {
-    return _client.post('/app/record/self-timeline', {
+    return _apiClient.post('/app/record/self-timeline', {
       'direction': kind?.backendDirection,
       'pageNo': pageNo,
       'pageSize': pageSize,
-    }, (json) {
+    }, fromJsonT: (json) {
       final map = _asMap(json);
       final summary = _asMap(map['summaryInfo']);
       final page = _asMap(map['pageResult']);
@@ -93,11 +93,11 @@ class ApiLedgerRepository implements LedgerRepository {
 
   @override
   Future<List<ReciprocityEventSummary>> fetchReciprocityList(ReciprocityStatus status, {int pageNo = 1, int pageSize = 50}) async {
-    return _client.post('/app/reciprocity/page', {
+    return _apiClient.post('/app/reciprocity/page', {
       'reciprocityStatus': status.backendValue,
       'pageNo': pageNo,
       'pageSize': pageSize,
-    }, (json) {
+    }, fromJsonT: (json) {
       final page = _asMap(json);
       return _asList(page['list']).map((item) {
         final map = _asMap(item);
@@ -123,7 +123,7 @@ class ApiLedgerRepository implements LedgerRepository {
 
   @override
   Future<ReciprocityDetail> fetchReciprocityDetail(String recordId) async {
-    return _client.post('/app/reciprocity/detail', {'recordId': recordId}, (json) {
+    return _apiClient.post('/app/reciprocity/detail', {'recordId': recordId}, fromJsonT: (json) {
       final map = _asMap(json);
       final history = _asMap(map['historyReference']);
       return ReciprocityDetail(
@@ -150,7 +150,7 @@ class ApiLedgerRepository implements LedgerRepository {
 
   @override
   Future<List<EventTypeOption>> fetchEventTypes() async {
-    return _client.post('/app/dict/event-type/list', {'enabledFlag': true}, (json) {
+    return _apiClient.post('/app/dict/event-type/list', {'enabledFlag': true}, fromJsonT: (json) {
       final map = _asMap(json);
       return _asList(map['list']).map((item) {
         final raw = _asMap(item);
@@ -165,7 +165,7 @@ class ApiLedgerRepository implements LedgerRepository {
 
   @override
   Future<List<RelationTypeOption>> fetchRelationTypes({String? keyword}) async {
-    return _client.post('/app/dict/relation-type/list', {'keyword': keyword}, (json) {
+    return _apiClient.post('/app/dict/relation-type/list', {'keyword': keyword}, fromJsonT: (json) {
       final map = _asMap(json);
       return _asList(map['list']).map((item) {
         final raw = _asMap(item);
@@ -180,12 +180,12 @@ class ApiLedgerRepository implements LedgerRepository {
 
   @override
   Future<List<EventOption>> fetchEventOptions({required RecordKind kind, String? contactId, int pageNo = 1, int pageSize = 50}) async {
-    return _client.post('/app/event/page', {
+    return _apiClient.post('/app/event/page', {
       'eventOwnerType': kind.eventOwnerType,
       'ownerContactId': kind == RecordKind.give ? contactId : null,
       'pageNo': pageNo,
       'pageSize': pageSize,
-    }, (json) {
+    }, fromJsonT: (json) {
       final page = _asMap(json);
       return _asList(page['list']).map((item) {
         final map = _asMap(item);
@@ -206,40 +206,40 @@ class ApiLedgerRepository implements LedgerRepository {
   @override
   Future<String> saveRecord(RecordSaveDraft draft) async {
     final eventId = draft.existingEventId ?? await _createEvent(draft);
-    final result = await _client.post('/app/record/save', {
+    final result = await _apiClient.post('/app/record/save', {
       'contactId': draft.contactId,
       'eventId': eventId,
       'direction': draft.kind.backendDirection,
       'amount': draft.amount.toStringAsFixed(2),
       'recordDate': _dateString(draft.recordDate),
       'remark': draft.recordRemark,
-    }, (json) => _asMap(json));
+    }, fromJsonT: (json) => _asMap(json));
     return _stringValue(result['id']);
   }
 
   @override
   Future<String> saveContact(ContactSaveDraft draft) async {
-    final result = await _client.post('/app/contact/save', {
+    final result = await _apiClient.post('/app/contact/save', {
       'contactName': draft.name,
       'aliasName': draft.aliasName,
       'salutation': draft.salutation,
       'mobile': draft.mobile,
       'relationType': draft.relationTypeCode,
       'remark': draft.remark,
-    }, (json) => _asMap(json));
+    }, fromJsonT: (json) => _asMap(json));
     return _stringValue(result['id']);
   }
 
   @override
   Future<ContactQuickSaveResult> quickSaveContact(ContactSaveDraft draft) async {
-    final result = await _client.post('/app/record/quick-save-contact', {
+    final result = await _apiClient.post('/app/record/quick-save-contact', {
       'contactName': draft.name,
       'aliasName': draft.aliasName,
       'salutation': draft.salutation,
       'mobile': draft.mobile,
       'relationType': draft.relationTypeCode,
       'remark': draft.remark,
-    }, (json) => _asMap(json));
+    }, fromJsonT: (json) => _asMap(json));
     return ContactQuickSaveResult(
       contactId: _stringValue(result['contactId']),
       contactName: _stringValue(result['contactName']),
@@ -250,7 +250,7 @@ class ApiLedgerRepository implements LedgerRepository {
 
   @override
   Future<EventsByContact> eventsByContact(String contactId) async {
-    return _client.post('/app/event/by-contact', {'contactId': contactId}, (json) {
+    return _apiClient.post('/app/event/by-contact', {'contactId': contactId}, fromJsonT: (json) {
       final map = _asMap(json);
       final selfEventList = _asList(map['selfEventList']).map((item) => _eventOptionFromJson(_asMap(item))).toList();
       final contactEventList = _asList(map['contactEventList']).map((item) => _eventOptionFromJson(_asMap(item))).toList();
@@ -265,7 +265,7 @@ class ApiLedgerRepository implements LedgerRepository {
 
   @override
   Future<String> saveRecordWithEvent(RecordSaveWithEventDraft draft) async {
-    final result = await _client.post('/app/record/save-with-event', {
+    final result = await _apiClient.post('/app/record/save-with-event', {
       'contactId': draft.contactId,
       'eventName': draft.eventName,
       'eventTypeId': draft.eventTypeId,
@@ -277,7 +277,7 @@ class ApiLedgerRepository implements LedgerRepository {
       'amount': draft.amount.toStringAsFixed(2),
       'recordDate': _dateString(draft.recordDate),
       'recordRemark': draft.recordRemark,
-    }, (json) => _asMap(json));
+    }, fromJsonT: (json) => _asMap(json));
     return _stringValue(result['id']);
   }
 
@@ -290,15 +290,26 @@ class ApiLedgerRepository implements LedgerRepository {
     if (eventName.isEmpty) {
       throw const ApiException(code: -1, message: '请输入事件名称');
     }
-    final result = await _client.post('/app/event/save', {
+    final result = await _apiClient.post('/app/event/save', {
       'eventName': eventName,
       'eventTypeId': eventType.id,
       'eventOwnerType': draft.kind.eventOwnerType,
       'ownerContactId': draft.kind == RecordKind.give ? draft.contactId : null,
       'eventDate': _dateString(draft.recordDate),
       'remark': '',
-    }, (json) => _asMap(json));
+    }, fromJsonT: (json) => _asMap(json));
     return _stringValue(result['id']);
+  }
+
+  RecordKind _recordKindFromDirection(String direction) {
+    switch (direction) {
+      case 'SEND':
+        return RecordKind.give;
+      case 'RECEIVE':
+        return RecordKind.receive;
+      default:
+        return RecordKind.give;
+    }
   }
 
   RecentRecord _recentRecordFromJson(Map<String, dynamic> map) {
@@ -423,10 +434,6 @@ class ApiLedgerRepository implements LedgerRepository {
       return null;
     }
     return DateTime.parse(text);
-  }
-
-  static RecordKind _recordKindFromDirection(String value) {
-    return value == 'RECEIVE' ? RecordKind.receive : RecordKind.give;
   }
 
   static String _dateString(DateTime value) {

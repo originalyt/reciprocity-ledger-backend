@@ -27,6 +27,9 @@ public interface RecordMapper {
             "join rl_event_type t on t.id = e.event_type_id",
             "<where>",
             "  1 = 1",
+            "  <if test='userId != null and userId != \"\"'>",
+            "    and r.user_id = #{userId}",
+            "  </if>",
             "  <if test='contactId != null and contactId != \"\"'>",
             "    and r.contact_id = #{contactId}",
             "  </if>",
@@ -50,7 +53,8 @@ public interface RecordMapper {
             "offset #{offset} limit #{pageSize}",
             "</script>"
     })
-    List<RecordPageItemResponse> selectPage(@Param("contactId") String contactId,
+    List<RecordPageItemResponse> selectPage(@Param("userId") String userId,
+                                            @Param("contactId") String contactId,
                                             @Param("eventId") String eventId,
                                             @Param("direction") String direction,
                                             @Param("eventTypeCode") String eventTypeCode,
@@ -67,6 +71,9 @@ public interface RecordMapper {
             "join rl_event_type t on t.id = e.event_type_id",
             "<where>",
             "  1 = 1",
+            "  <if test='userId != null and userId != \"\"'>",
+            "    and r.user_id = #{userId}",
+            "  </if>",
             "  <if test='contactId != null and contactId != \"\"'>",
             "    and r.contact_id = #{contactId}",
             "  </if>",
@@ -88,7 +95,8 @@ public interface RecordMapper {
             "</where>",
             "</script>"
     })
-    long countPage(@Param("contactId") String contactId,
+    long countPage(@Param("userId") String userId,
+                   @Param("contactId") String contactId,
                    @Param("eventId") String eventId,
                    @Param("direction") String direction,
                    @Param("eventTypeCode") String eventTypeCode,
@@ -107,10 +115,10 @@ public interface RecordMapper {
     })
     RecordDetailResponse selectDetailById(@Param("recordId") String recordId);
 
-    @Select("select id, contact_id, event_id, direction, amount, record_date, remark, reciprocity_status, create_time, update_time from rl_gift_record where id = #{recordId} limit 1")
+    @Select("select id, contact_id, event_id, direction, amount, record_date, remark, reciprocity_status, create_time, update_time, user_id from rl_gift_record where id = #{recordId} limit 1")
     GiftRecord selectEntityById(@Param("recordId") String recordId);
 
-    @Insert("insert into rl_gift_record(id, contact_id, event_id, direction, amount, record_date, remark, reciprocity_status) values(#{id}, #{contactId}, #{eventId}, #{direction}, #{amount}, #{recordDate}, #{remark}, #{reciprocityStatus})")
+    @Insert("insert into rl_gift_record(id, contact_id, event_id, direction, amount, record_date, remark, reciprocity_status, user_id) values(#{id}, #{contactId}, #{eventId}, #{direction}, #{amount}, #{recordDate}, #{remark}, #{reciprocityStatus}, #{userId})")
     int insert(GiftRecord record);
 
     @Update("update rl_gift_record set contact_id = #{contactId}, event_id = #{eventId}, direction = #{direction}, amount = #{amount}, record_date = #{recordDate}, remark = #{remark}, update_time = now() where id = #{id}")
@@ -128,14 +136,17 @@ public interface RecordMapper {
     @Select("select count(1) from rl_gift_record where contact_id = #{contactId} and reciprocity_status = #{status}")
     Long countByContactAndReciprocityStatus(@Param("contactId") String contactId, @Param("status") String status);
 
-    @Select("select coalesce(sum(amount), 0) from rl_gift_record where event_id = #{eventId} and direction = #{direction}")
-    BigDecimal sumAmountByEventAndDirection(@Param("eventId") String eventId, @Param("direction") String direction);
+    @Select("select coalesce(sum(amount), 0) from rl_gift_record where event_id = #{eventId} and direction = #{direction} and user_id = #{userId}")
+    BigDecimal sumAmountByEventAndDirectionAndUserId(@Param("eventId") String eventId, @Param("direction") String direction, @Param("userId") String userId);
 
-    @Select("select count(distinct contact_id) from rl_gift_record where event_id = #{eventId}")
-    Long countDistinctContactByEventId(@Param("eventId") String eventId);
+    @Select("select count(distinct contact_id) from rl_gift_record where event_id = #{eventId} and user_id = #{userId}")
+    Long countDistinctContactByEventIdAndUserId(@Param("eventId") String eventId, @Param("userId") String userId);
 
     @Select("select r.id as record_id, r.contact_id, c.contact_name, r.event_id, e.event_name, e.event_type_id, t.type_code as event_type_code, t.type_name as event_type_name, r.direction, r.amount, r.record_date, r.reciprocity_status from rl_gift_record r join rl_contact c on c.id = r.contact_id join rl_event e on e.id = r.event_id join rl_event_type t on t.id = e.event_type_id order by r.record_date desc, r.id desc limit #{limit}")
     List<RecordPageItemResponse> selectRecent(@Param("limit") int limit);
+
+    @Select("select r.id as record_id, r.contact_id, c.contact_name, r.event_id, e.event_name, e.event_type_id, t.type_code as event_type_code, t.type_name as event_type_name, r.direction, r.amount, r.record_date, r.reciprocity_status from rl_gift_record r join rl_contact c on c.id = r.contact_id join rl_event e on e.id = r.event_id join rl_event_type t on t.id = e.event_type_id where r.user_id = #{userId} order by r.record_date desc, r.id desc limit #{limit}")
+    List<RecordPageItemResponse> selectRecentByUserId(@Param("userId") String userId, @Param("limit") int limit);
 
     @Select({
             "<script>",
@@ -147,6 +158,9 @@ public interface RecordMapper {
             "from rl_gift_record r join rl_event e on e.id = r.event_id join rl_event_type t on t.id = e.event_type_id",
             "<where>",
             "  1 = 1",
+            "  <if test='userId != null and userId != \"\"'>",
+            "    and r.user_id = #{userId}",
+            "  </if>",
             "  <if test='contactId != null and contactId != \"\"'>",
             "    and r.contact_id = #{contactId}",
             "  </if>",
@@ -165,24 +179,28 @@ public interface RecordMapper {
             "</where>",
             "</script>"
     })
-    TimelineSummaryResponse selectTimelineSummary(@Param("contactId") String contactId,
+    TimelineSummaryResponse selectTimelineSummary(@Param("userId") String userId,
+                                                  @Param("contactId") String contactId,
                                                   @Param("direction") String direction,
                                                   @Param("eventTypeCode") String eventTypeCode,
                                                   @Param("startDate") LocalDate startDate,
                                                   @Param("endDate") LocalDate endDate);
 
-    @Select("select coalesce(sum(r.amount), 0) from rl_gift_record r join rl_event e on e.id = r.event_id where r.contact_id = #{contactId} and e.event_type_id = #{eventTypeId} and r.direction = #{direction}")
-    BigDecimal sumAmountByContactAndEventTypeAndDirection(@Param("contactId") String contactId,
+    @Select("select coalesce(sum(r.amount), 0) from rl_gift_record r join rl_event e on e.id = r.event_id where r.contact_id = #{contactId} and e.event_type_id = #{eventTypeId} and r.direction = #{direction} and r.user_id = #{userId}")
+    BigDecimal sumAmountByContactAndEventTypeAndDirection(@Param("userId") String userId,
+                                                          @Param("contactId") String contactId,
                                                           @Param("eventTypeId") String eventTypeId,
                                                           @Param("direction") String direction);
 
-    @Select("select count(1) from rl_gift_record r join rl_event e on e.id = r.event_id where r.contact_id = #{contactId} and e.event_type_id = #{eventTypeId} and r.reciprocity_status = #{status}")
-    Long countByContactAndEventTypeAndStatus(@Param("contactId") String contactId,
+    @Select("select count(1) from rl_gift_record r join rl_event e on e.id = r.event_id where r.contact_id = #{contactId} and e.event_type_id = #{eventTypeId} and r.reciprocity_status = #{status} and r.user_id = #{userId}")
+    Long countByContactAndEventTypeAndStatus(@Param("userId") String userId,
+                                             @Param("contactId") String contactId,
                                              @Param("eventTypeId") String eventTypeId,
                                              @Param("status") String status);
 
-    @Select("select r.id as record_id, r.contact_id, c.contact_name, r.event_id, e.event_name, e.event_type_id, t.type_code as event_type_code, t.type_name as event_type_name, r.direction, r.amount, r.record_date, r.reciprocity_status from rl_gift_record r join rl_contact c on c.id = r.contact_id join rl_event e on e.id = r.event_id join rl_event_type t on t.id = e.event_type_id where r.contact_id = #{contactId} and e.event_type_id = #{eventTypeId} order by r.record_date desc, r.id desc limit 1")
-    RecordPageItemResponse selectLastRecordByContactAndEventType(@Param("contactId") String contactId,
+    @Select("select r.id as record_id, r.contact_id, c.contact_name, r.event_id, e.event_name, e.event_type_id, t.type_code as event_type_code, t.type_name as event_type_name, r.direction, r.amount, r.record_date, r.reciprocity_status from rl_gift_record r join rl_contact c on c.id = r.contact_id join rl_event e on e.id = r.event_id join rl_event_type t on t.id = e.event_type_id where r.contact_id = #{contactId} and e.event_type_id = #{eventTypeId} and r.user_id = #{userId} order by r.record_date desc, r.id desc limit 1")
+    RecordPageItemResponse selectLastRecordByContactAndEventType(@Param("userId") String userId,
+                                                                 @Param("contactId") String contactId,
                                                                  @Param("eventTypeId") String eventTypeId);
 
     @Select({

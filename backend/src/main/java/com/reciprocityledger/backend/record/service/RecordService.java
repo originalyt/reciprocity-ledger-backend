@@ -30,6 +30,7 @@ import com.reciprocityledger.backend.record.dto.response.TimelineResponse;
 import com.reciprocityledger.backend.record.dto.response.TimelineSummaryResponse;
 import com.reciprocityledger.backend.record.entity.GiftRecord;
 import com.reciprocityledger.backend.record.mapper.RecordMapper;
+import com.reciprocityledger.backend.user.context.UserContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,7 +52,9 @@ public class RecordService {
     public PageResponse<RecordPageItemResponse> page(RecordPageRequest request) {
         int pageNo = PageUtils.safePageNo(request.getPageNo());
         int pageSize = PageUtils.safePageSize(request.getPageSize());
+        String userId = UserContext.getUserId();
         List<RecordPageItemResponse> list = recordMapper.selectPage(
+                userId,
                 normalizeNullable(request.getContactId()),
                 normalizeNullable(request.getEventId()),
                 normalizeDirection(request.getDirection(), false),
@@ -62,6 +65,7 @@ public class RecordService {
                 pageSize
         );
         long total = recordMapper.countPage(
+                userId,
                 normalizeNullable(request.getContactId()),
                 normalizeNullable(request.getEventId()),
                 normalizeDirection(request.getDirection(), false),
@@ -94,6 +98,7 @@ public class RecordService {
         record.setRecordDate(request.getRecordDate());
         record.setRemark(normalizeNullableLength(request.getRemark(), 500));
         record.setReciprocityStatus(ReciprocityStatusEnum.UNMATCHED.name());
+        record.setUserId(UserContext.getUserId());
         recordMapper.insert(record);
         reciprocityService.rebuildForRecord(record.getId());
         return new IdResponse(record.getId());
@@ -153,6 +158,10 @@ public class RecordService {
         if (record == null) {
             throw new BusinessException(ErrorCode.RECORD_NOT_FOUND, "记录不存在");
         }
+        String userId = UserContext.getUserId();
+        if (!userId.equals(record.getUserId())) {
+            throw new BusinessException(ErrorCode.RECORD_NOT_FOUND, "记录不存在");
+        }
         return record;
     }
 
@@ -172,9 +181,10 @@ public class RecordService {
         int pageSize = PageUtils.safePageSize(pageSizeValue);
         String normalizedDirection = normalizeDirection(direction, false);
         String normalizedEventTypeCode = normalizeNullable(eventTypeCode);
-        List<RecordPageItemResponse> list = recordMapper.selectPage(contactId, null, normalizedDirection, normalizedEventTypeCode, startDate, endDate, PageUtils.offset(pageNo, pageSize), pageSize);
-        long total = recordMapper.countPage(contactId, null, normalizedDirection, normalizedEventTypeCode, startDate, endDate);
-        TimelineSummaryResponse summary = recordMapper.selectTimelineSummary(contactId, normalizedDirection, normalizedEventTypeCode, startDate, endDate);
+        String userId = UserContext.getUserId();
+        List<RecordPageItemResponse> list = recordMapper.selectPage(userId, contactId, null, normalizedDirection, normalizedEventTypeCode, startDate, endDate, PageUtils.offset(pageNo, pageSize), pageSize);
+        long total = recordMapper.countPage(userId, contactId, null, normalizedDirection, normalizedEventTypeCode, startDate, endDate);
+        TimelineSummaryResponse summary = recordMapper.selectTimelineSummary(userId, contactId, normalizedDirection, normalizedEventTypeCode, startDate, endDate);
         if (summary == null) {
             summary = new TimelineSummaryResponse();
         }

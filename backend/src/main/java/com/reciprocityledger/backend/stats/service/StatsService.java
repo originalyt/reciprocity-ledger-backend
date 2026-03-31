@@ -11,6 +11,7 @@ import com.reciprocityledger.backend.stats.dto.response.StatsByContactItemRespon
 import com.reciprocityledger.backend.stats.dto.response.StatsByEventTypeItemResponse;
 import com.reciprocityledger.backend.stats.dto.response.StatsOverviewResponse;
 import com.reciprocityledger.backend.stats.mapper.StatsMapper;
+import com.reciprocityledger.backend.user.context.UserContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -24,7 +25,8 @@ public class StatsService {
     private final StatsMapper statsMapper;
 
     public StatsOverviewResponse overview(StatsOverviewRequest request) {
-        StatsOverviewResponse response = statsMapper.selectOverview(request.getStartDate(), request.getEndDate());
+        String userId = UserContext.getUserId();
+        StatsOverviewResponse response = statsMapper.selectOverview(userId, request.getStartDate(), request.getEndDate());
         if (response == null) {
             response = new StatsOverviewResponse();
         }
@@ -51,17 +53,20 @@ public class StatsService {
         int pageSize = PageUtils.safePageSize(request.getPageSize());
         String relationType = normalizeNullable(request.getRelationType());
         String keyword = normalizeNullable(request.getKeyword());
-        List<StatsByContactItemResponse> list = statsMapper.selectByContact(request.getStartDate(), request.getEndDate(), relationType, keyword, PageUtils.offset(pageNo, pageSize), pageSize);
-        long total = statsMapper.countByContact(request.getStartDate(), request.getEndDate(), relationType, keyword);
+        String userId = UserContext.getUserId();
+        List<StatsByContactItemResponse> list = statsMapper.selectByContact(userId, request.getStartDate(), request.getEndDate(), relationType, keyword, PageUtils.offset(pageNo, pageSize), pageSize);
+        long total = statsMapper.countByContact(userId, request.getStartDate(), request.getEndDate(), relationType, keyword);
         return PageResponse.of(list, pageNo, pageSize, total);
     }
 
     public ListResponse<StatsByEventTypeItemResponse> byEventType(StatsByEventTypeRequest request) {
-        return ListResponse.of(statsMapper.selectByEventType(request.getStartDate(), request.getEndDate()));
+        String userId = UserContext.getUserId();
+        return ListResponse.of(statsMapper.selectByEventType(userId, request.getStartDate(), request.getEndDate()));
     }
 
     public Long pendingReciprocityCount() {
-        Long value = statsMapper.countPendingReciprocity();
+        String userId = UserContext.getUserId();
+        Long value = statsMapper.countPendingReciprocity(userId);
         return value == null ? 0L : value;
     }
 

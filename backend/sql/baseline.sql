@@ -171,3 +171,58 @@ VALUES
     ('1009', 'FESTIVAL', '节日往来', 90, TRUE, TRUE, '系统预置事件类型'),
     ('1010', 'OTHER', '其他', 100, TRUE, TRUE, '系统预置事件类型')
 ON CONFLICT (type_code) DO NOTHING;
+
+
+
+-- 用户模块和多租户数据隔离迁移脚本
+-- 执行前请备份数据库！
+
+-- 1. 创建用户表
+CREATE TABLE IF NOT EXISTS rl_user (
+                                       id VARCHAR(32) PRIMARY KEY,
+                                       email VARCHAR(128) NOT NULL UNIQUE,
+                                       password VARCHAR(128) NOT NULL,
+                                       nickname VARCHAR(32),
+                                       avatar_url VARCHAR(255),
+                                       status VARCHAR(16) NOT NULL DEFAULT 'NORMAL',
+                                       last_login_time TIMESTAMP,
+                                       create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                       update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE rl_user IS '用户表';
+COMMENT ON COLUMN rl_user.id IS '主键，用户唯一标识';
+COMMENT ON COLUMN rl_user.email IS '邮箱，用于登录';
+COMMENT ON COLUMN rl_user.password IS '密码，BCrypt加密存储';
+COMMENT ON COLUMN rl_user.nickname IS '昵称';
+COMMENT ON COLUMN rl_user.avatar_url IS '头像URL';
+COMMENT ON COLUMN rl_user.status IS '状态，NORMAL表示正常，DISABLED表示停用';
+COMMENT ON COLUMN rl_user.last_login_time IS '最后登录时间';
+COMMENT ON COLUMN rl_user.create_time IS '创建时间';
+COMMENT ON COLUMN rl_user.update_time IS '更新时间';
+
+CREATE INDEX IF NOT EXISTS idx_rl_user_email ON rl_user(email);
+CREATE INDEX IF NOT EXISTS idx_rl_user_status ON rl_user(status);
+
+-- 2. 为联系人表添加 user_id 字段
+ALTER TABLE rl_contact ADD COLUMN IF NOT EXISTS user_id VARCHAR(32);
+COMMENT ON COLUMN rl_contact.user_id IS '所属用户ID，多租户数据隔离';
+
+-- 3. 为事件表添加 user_id 字段
+ALTER TABLE rl_event ADD COLUMN IF NOT EXISTS user_id VARCHAR(32);
+COMMENT ON COLUMN rl_event.user_id IS '所属用户ID，多租户数据隔离';
+
+-- 4. 为人情记录表添加 user_id 字段
+ALTER TABLE rl_gift_record ADD COLUMN IF NOT EXISTS user_id VARCHAR(32);
+COMMENT ON COLUMN rl_gift_record.user_id IS '所属用户ID，多租户数据隔离';
+
+-- 5. 为闭环匹配表添加 user_id 字段
+ALTER TABLE rl_reciprocity_match ADD COLUMN IF NOT EXISTS user_id VARCHAR(32);
+COMMENT ON COLUMN rl_reciprocity_match.user_id IS '所属用户ID，多租户数据隔离';
+
+-- 6. 为 user_id 字段添加索引以提升查询性能
+CREATE INDEX IF NOT EXISTS idx_rl_contact_user_id ON rl_contact(user_id);
+CREATE INDEX IF NOT EXISTS idx_rl_event_user_id ON rl_event(user_id);
+CREATE INDEX IF NOT EXISTS idx_rl_gift_record_user_id ON rl_gift_record(user_id);
+CREATE INDEX IF NOT EXISTS idx_rl_reciprocity_match_user_id ON rl_reciprocity_match(user_id);
+

@@ -24,6 +24,9 @@ public interface StatsMapper {
             "from rl_gift_record",
             "<where>",
             "  1 = 1",
+            "  <if test='userId != null and userId != \"\"'>",
+            "    and user_id = #{userId}",
+            "  </if>",
             "  <if test='startDate != null'>",
             "    and record_date &gt;= #{startDate}",
             "  </if>",
@@ -33,7 +36,7 @@ public interface StatsMapper {
             "</where>",
             "</script>"
     })
-    StatsOverviewResponse selectOverview(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+    StatsOverviewResponse selectOverview(@Param("userId") String userId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 
     @Select({
             "<script>",
@@ -45,6 +48,9 @@ public interface StatsMapper {
             "from rl_contact c join rl_gift_record r on r.contact_id = c.id",
             "<where>",
             "  c.status = 'NORMAL'",
+            "  <if test='userId != null and userId != \"\"'>",
+            "    and c.user_id = #{userId}",
+            "  </if>",
             "  <if test='relationType != null and relationType != \"\"'>",
             "    and c.relation_type = #{relationType}",
             "  </if>",
@@ -63,7 +69,8 @@ public interface StatsMapper {
             "offset #{offset} limit #{pageSize}",
             "</script>"
     })
-    List<StatsByContactItemResponse> selectByContact(@Param("startDate") LocalDate startDate,
+    List<StatsByContactItemResponse> selectByContact(@Param("userId") String userId,
+                                                     @Param("startDate") LocalDate startDate,
                                                      @Param("endDate") LocalDate endDate,
                                                      @Param("relationType") String relationType,
                                                      @Param("keyword") String keyword,
@@ -76,6 +83,9 @@ public interface StatsMapper {
             "select c.id from rl_contact c join rl_gift_record r on r.contact_id = c.id",
             "<where>",
             "  c.status = 'NORMAL'",
+            "  <if test='userId != null and userId != \"\"'>",
+            "    and c.user_id = #{userId}",
+            "  </if>",
             "  <if test='relationType != null and relationType != \"\"'>",
             "    and c.relation_type = #{relationType}",
             "  </if>",
@@ -93,7 +103,8 @@ public interface StatsMapper {
             ") tmp",
             "</script>"
     })
-    long countByContact(@Param("startDate") LocalDate startDate,
+    long countByContact(@Param("userId") String userId,
+                        @Param("startDate") LocalDate startDate,
                         @Param("endDate") LocalDate endDate,
                         @Param("relationType") String relationType,
                         @Param("keyword") String keyword);
@@ -108,6 +119,9 @@ public interface StatsMapper {
             "from rl_event_type t join rl_event e on e.event_type_id = t.id join rl_gift_record r on r.event_id = e.id",
             "<where>",
             "  1 = 1",
+            "  <if test='userId != null and userId != \"\"'>",
+            "    and r.user_id = #{userId}",
+            "  </if>",
             "  <if test='startDate != null'>",
             "    and r.record_date &gt;= #{startDate}",
             "  </if>",
@@ -119,8 +133,18 @@ public interface StatsMapper {
             "order by count(r.id) desc, t.id asc",
             "</script>"
     })
-    List<StatsByEventTypeItemResponse> selectByEventType(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+    List<StatsByEventTypeItemResponse> selectByEventType(@Param("userId") String userId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 
-    @Select("select count(1) from rl_gift_record where reciprocity_status = 'UNMATCHED'")
-    Long countPendingReciprocity();
+    @Select({
+            "<script>",
+            "select count(1) from rl_gift_record",
+            "<where>",
+            "  reciprocity_status = 'UNMATCHED'",
+            "  <if test='userId != null and userId != \"\"'>",
+            "    and user_id = #{userId}",
+            "  </if>",
+            "</where>",
+            "</script>"
+    })
+    Long countPendingReciprocity(@Param("userId") String userId);
 }

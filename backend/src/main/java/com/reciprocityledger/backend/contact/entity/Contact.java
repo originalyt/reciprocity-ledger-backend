@@ -60,4 +60,9 @@ public class Contact {
      * 更新时间。
      */
     private LocalDateTime updateTime;
+
+    /**
+     * 所属用户ID，多租户数据隔离。
+     */
+    private String userId;
 }

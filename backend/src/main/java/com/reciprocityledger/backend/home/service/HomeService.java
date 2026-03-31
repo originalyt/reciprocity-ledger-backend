@@ -7,6 +7,7 @@ import com.reciprocityledger.backend.record.mapper.RecordMapper;
 import com.reciprocityledger.backend.stats.dto.request.StatsOverviewRequest;
 import com.reciprocityledger.backend.stats.dto.response.StatsOverviewResponse;
 import com.reciprocityledger.backend.stats.service.StatsService;
+import com.reciprocityledger.backend.user.context.UserContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -27,8 +28,9 @@ public class HomeService {
         response.setReceiveTotalAmount(statsOverview.getReceiveTotalAmount());
         response.setSendTotalAmount(statsOverview.getSendTotalAmount());
         response.setPendingReciprocityCount(statsService.pendingReciprocityCount());
-        response.setRecentRecordList(recordMapper.selectRecent(10));
-        response.setRecentEventList(eventService.recentEvents(10));
+        String userId = UserContext.getUserId();
+        response.setRecentRecordList(recordMapper.selectRecentByUserId(userId, 10));
+        response.setRecentEventList(eventService.recentEventsByUserId(userId, 10));
         return response;
     }
 }

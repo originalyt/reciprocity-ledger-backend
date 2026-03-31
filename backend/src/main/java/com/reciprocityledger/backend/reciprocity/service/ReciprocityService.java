@@ -27,6 +27,7 @@ import com.reciprocityledger.backend.reciprocity.dto.response.ReciprocityMatchIn
 import com.reciprocityledger.backend.reciprocity.dto.response.ReciprocityPageItemResponse;
 import com.reciprocityledger.backend.reciprocity.entity.ReciprocityMatch;
 import com.reciprocityledger.backend.reciprocity.mapper.ReciprocityMatchMapper;
+import com.reciprocityledger.backend.user.context.UserContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,8 +50,9 @@ public class ReciprocityService {
         String contactId = normalizeNullable(request.getContactId());
         String eventTypeCode = normalizeNullable(request.getEventTypeCode());
         String reciprocityStatus = normalizeNullable(request.getReciprocityStatus());
-        List<ReciprocityPageItemResponse> list = reciprocityMatchMapper.selectPage(contactId, eventTypeCode, reciprocityStatus, request.getStartDate(), request.getEndDate(), PageUtils.offset(pageNo, pageSize), pageSize);
-        long total = reciprocityMatchMapper.countPage(contactId, eventTypeCode, reciprocityStatus, request.getStartDate(), request.getEndDate());
+        String userId = UserContext.getUserId();
+        List<ReciprocityPageItemResponse> list = reciprocityMatchMapper.selectPage(userId, contactId, eventTypeCode, reciprocityStatus, request.getStartDate(), request.getEndDate(), PageUtils.offset(pageNo, pageSize), pageSize);
+        long total = reciprocityMatchMapper.countPage(userId, contactId, eventTypeCode, reciprocityStatus, request.getStartDate(), request.getEndDate());
         return PageResponse.of(list, pageNo, pageSize, total);
     }
 
@@ -81,10 +83,11 @@ public class ReciprocityService {
     }
 
     public ReciprocityHistoryReferenceResponse historyReference(ReciprocityHistoryReferenceRequest request) {
-        BigDecimal receiveAmount = recordMapper.sumAmountByContactAndEventTypeAndDirection(request.getContactId(), request.getEventTypeId(), "RECEIVE");
-        BigDecimal sendAmount = recordMapper.sumAmountByContactAndEventTypeAndDirection(request.getContactId(), request.getEventTypeId(), "SEND");
-        Long unclosedCount = recordMapper.countByContactAndEventTypeAndStatus(request.getContactId(), request.getEventTypeId(), ReciprocityStatusEnum.UNMATCHED.name());
-        RecordPageItemResponse lastRecord = recordMapper.selectLastRecordByContactAndEventType(request.getContactId(), request.getEventTypeId());
+        String userId = UserContext.getUserId();
+        BigDecimal receiveAmount = recordMapper.sumAmountByContactAndEventTypeAndDirection(userId, request.getContactId(), request.getEventTypeId(), "RECEIVE");
+        BigDecimal sendAmount = recordMapper.sumAmountByContactAndEventTypeAndDirection(userId, request.getContactId(), request.getEventTypeId(), "SEND");
+        Long unclosedCount = recordMapper.countByContactAndEventTypeAndStatus(userId, request.getContactId(), request.getEventTypeId(), ReciprocityStatusEnum.UNMATCHED.name());
+        RecordPageItemResponse lastRecord = recordMapper.selectLastRecordByContactAndEventType(userId, request.getContactId(), request.getEventTypeId());
         ReciprocityHistoryReferenceResponse response = new ReciprocityHistoryReferenceResponse();
         response.setSameTypeReceiveAmount(receiveAmount == null ? BigDecimal.ZERO : receiveAmount);
         response.setSameTypeSendAmount(sendAmount == null ? BigDecimal.ZERO : sendAmount);
@@ -111,6 +114,7 @@ public class ReciprocityService {
         match.setMatchType(MatchTypeEnum.MANUAL.name());
         match.setMatchStatus(MatchStatusEnum.ACTIVE.name());
         match.setRemark(normalizeNullable(request.getRemark()));
+        match.setUserId(sourceRecord.getUserId());
         reciprocityMatchMapper.insert(match);
         recordMapper.updateReciprocityStatus(sourceRecord.getId(), ReciprocityStatusEnum.MANUAL_CONFIRMED.name());
         recordMapper.updateReciprocityStatus(targetRecord.getId(), ReciprocityStatusEnum.MANUAL_CONFIRMED.name());
@@ -125,6 +129,10 @@ public class ReciprocityService {
         }
         if (!MatchStatusEnum.ACTIVE.name().equals(match.getMatchStatus())) {
             throw new BusinessException(ErrorCode.INVALID_RECIPROCITY_OPERATION, "当前闭环关系已经失效");
+        }
+        String userId = UserContext.getUserId();
+        if (!userId.equals(match.getUserId())) {
+            throw new BusinessException(ErrorCode.RECIPROCITY_MATCH_NOT_FOUND, "闭环关系不存在");
         }
         String reason = normalizeNullable(request.getCancelReason());
         reciprocityMatchMapper.cancel(match.getId(), reason);
@@ -151,6 +159,7 @@ public class ReciprocityService {
         match.setTargetRecordId(candidateRecord.getId());
         match.setMatchType(MatchTypeEnum.AUTO.name());
         match.setMatchStatus(MatchStatusEnum.ACTIVE.name());
+        match.setUserId(currentRecord.getUserId());
         reciprocityMatchMapper.insert(match);
         recordMapper.updateReciprocityStatus(currentRecord.getId(), ReciprocityStatusEnum.MATCHED.name());
         recordMapper.updateReciprocityStatus(candidateRecord.getId(), ReciprocityStatusEnum.MATCHED.name());

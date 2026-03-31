@@ -18,6 +18,7 @@ import com.reciprocityledger.backend.contact.entity.Contact;
 import com.reciprocityledger.backend.contact.mapper.ContactMapper;
 import com.reciprocityledger.backend.record.dto.request.RecordQuickSaveContactRequest;
 import com.reciprocityledger.backend.record.mapper.RecordMapper;
+import com.reciprocityledger.backend.user.context.UserContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,8 +40,9 @@ public class ContactService {
         int pageSize = PageUtils.safePageSize(request.getPageSize());
         String keyword = normalizeNullable(request.getKeyword());
         String relationType = normalizeNullable(request.getRelationType());
-        long total = contactMapper.countPage(keyword, relationType);
-        List<ContactPageItemResponse> list = contactMapper.selectPage(keyword, relationType, PageUtils.offset(pageNo, pageSize), pageSize);
+        String userId = UserContext.getUserId();
+        long total = contactMapper.countPage(keyword, relationType, userId);
+        List<ContactPageItemResponse> list = contactMapper.selectPage(keyword, relationType, userId, PageUtils.offset(pageNo, pageSize), pageSize);
         return PageResponse.of(list, pageNo, pageSize, total);
     }
 
@@ -60,6 +62,7 @@ public class ContactService {
         contact.setRelationType(normalizeNullableLength(request.getRelationType(), 32));
         contact.setRemark(normalizeNullableLength(request.getRemark(), 500));
         contact.setStatus("NORMAL");
+        contact.setUserId(UserContext.getUserId());
         contactMapper.insert(contact);
         return new IdResponse(contact.getId());
     }
@@ -80,6 +83,10 @@ public class ContactService {
     public Contact requireContact(String contactId) {
         Contact contact = contactMapper.selectById(contactId);
         if (contact == null) {
+            throw new BusinessException(ErrorCode.CONTACT_NOT_FOUND, "联系人不存在");
+        }
+        String userId = UserContext.getUserId();
+        if (!userId.equals(contact.getUserId())) {
             throw new BusinessException(ErrorCode.CONTACT_NOT_FOUND, "联系人不存在");
         }
         return contact;
@@ -104,6 +111,7 @@ public class ContactService {
         contact.setRelationType(normalizeNullableLength(request.getRelationType(), 32));
         contact.setRemark(normalizeNullableLength(request.getRemark(), 500));
         contact.setStatus("NORMAL");
+        contact.setUserId(UserContext.getUserId());
         contactMapper.insert(contact);
         return new IdResponse(contact.getId());
     }

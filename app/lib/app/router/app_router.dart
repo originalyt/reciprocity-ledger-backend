@@ -1,9 +1,14 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/auth/auth_provider.dart';
 import '../../core/widgets/ledger_bottom_nav_scaffold.dart';
+import '../../features/auth/presentation/pages/login_page.dart';
+import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/contact/presentation/pages/contact_detail_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
+import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/record/presentation/pages/record_editor_page.dart';
 import '../../features/reciprocity/presentation/pages/reciprocity_detail_page.dart';
 import '../../features/reciprocity/presentation/pages/reciprocity_page.dart';
@@ -12,7 +17,22 @@ import '../../shared/models/ledger_models.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: '/home',
+    initialLocation: '/login',
+    refreshListenable: ValueNotifier(ref.read(isAuthenticatedProvider)),
+    redirect: (context, state) {
+      final isAuthenticated = ref.read(isAuthenticatedProvider);
+      final isOnAuthPage = state.uri.path == '/login' || state.uri.path == '/register';
+
+      if (!isAuthenticated && !isOnAuthPage) {
+        return '/login';
+      }
+
+      if (isAuthenticated && isOnAuthPage) {
+        return '/home';
+      }
+
+      return null;
+    },
     routes: [
       ShellRoute(
         builder: (context, state, child) {
@@ -33,6 +53,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/reciprocity',
             builder: (context, state) => const ReciprocityPage(),
+          ),
+          GoRoute(
+            path: '/profile',
+            builder: (context, state) => const ProfilePage(),
           ),
         ],
       ),
@@ -60,6 +84,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             eventId: state.pathParameters['eventId']!,
           );
         },
+      ),
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const LoginPage(),
+      ),
+      GoRoute(
+        path: '/register',
+        builder: (context, state) => const RegisterPage(),
       ),
     ],
   );

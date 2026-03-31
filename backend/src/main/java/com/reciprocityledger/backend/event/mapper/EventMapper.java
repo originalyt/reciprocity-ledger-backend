@@ -25,6 +25,9 @@ public interface EventMapper {
             "left join rl_gift_record r on r.event_id = e.id",
             "<where>",
             "  e.status = 'NORMAL'",
+            "  <if test='userId != null and userId != \"\"'>",
+            "    and e.user_id = #{userId}",
+            "  </if>",
             "  <if test='keyword != null and keyword != \"\"'>",
             "    and e.event_name like concat('%', #{keyword}, '%')",
             "  </if>",
@@ -55,6 +58,7 @@ public interface EventMapper {
                                            @Param("ownerContactId") String ownerContactId,
                                            @Param("startDate") LocalDate startDate,
                                            @Param("endDate") LocalDate endDate,
+                                           @Param("userId") String userId,
                                            @Param("offset") int offset,
                                            @Param("pageSize") int pageSize);
 
@@ -63,6 +67,9 @@ public interface EventMapper {
             "select count(1) from rl_event e join rl_event_type t on t.id = e.event_type_id",
             "<where>",
             "  e.status = 'NORMAL'",
+            "  <if test='userId != null and userId != \"\"'>",
+            "    and e.user_id = #{userId}",
+            "  </if>",
             "  <if test='keyword != null and keyword != \"\"'>",
             "    and e.event_name like concat('%', #{keyword}, '%')",
             "  </if>",
@@ -89,12 +96,13 @@ public interface EventMapper {
                    @Param("eventOwnerType") String eventOwnerType,
                    @Param("ownerContactId") String ownerContactId,
                    @Param("startDate") LocalDate startDate,
-                   @Param("endDate") LocalDate endDate);
+                   @Param("endDate") LocalDate endDate,
+                   @Param("userId") String userId);
 
-    @Select("select id, event_name, event_type_id, event_owner_type, owner_contact_id, event_date, remark, status, create_time, update_time from rl_event where id = #{eventId} limit 1")
+    @Select("select id, event_name, event_type_id, event_owner_type, owner_contact_id, event_date, remark, status, create_time, update_time, user_id from rl_event where id = #{eventId} limit 1")
     GiftEvent selectById(@Param("eventId") String eventId);
 
-    @Insert("insert into rl_event(id, event_name, event_type_id, event_owner_type, owner_contact_id, event_date, remark, status) values(#{id}, #{eventName}, #{eventTypeId}, #{eventOwnerType}, #{ownerContactId}, #{eventDate}, #{remark}, #{status})")
+    @Insert("insert into rl_event(id, event_name, event_type_id, event_owner_type, owner_contact_id, event_date, remark, status, user_id) values(#{id}, #{eventName}, #{eventTypeId}, #{eventOwnerType}, #{ownerContactId}, #{eventDate}, #{remark}, #{status}, #{userId})")
     int insert(GiftEvent event);
 
     @Update("update rl_event set event_name = #{eventName}, event_type_id = #{eventTypeId}, event_owner_type = #{eventOwnerType}, owner_contact_id = #{ownerContactId}, event_date = #{eventDate}, remark = #{remark}, update_time = now() where id = #{id}")
@@ -115,6 +123,9 @@ public interface EventMapper {
     @Select("select e.id as event_id, e.event_name, e.event_type_id, t.type_code as event_type_code, t.type_name as event_type_name, e.event_owner_type, e.owner_contact_id, c.contact_name as owner_contact_name, e.event_date, 0 as record_count from rl_event e join rl_event_type t on t.id = e.event_type_id left join rl_contact c on c.id = e.owner_contact_id where e.status = 'NORMAL' order by e.event_date desc, e.id desc limit #{limit}")
     List<EventPageItemResponse> selectRecent(@Param("limit") int limit);
 
+    @Select("select e.id as event_id, e.event_name, e.event_type_id, t.type_code as event_type_code, t.type_name as event_type_name, e.event_owner_type, e.owner_contact_id, c.contact_name as owner_contact_name, e.event_date, 0 as record_count from rl_event e join rl_event_type t on t.id = e.event_type_id left join rl_contact c on c.id = e.owner_contact_id where e.status = 'NORMAL' and e.user_id = #{userId} order by e.event_date desc, e.id desc limit #{limit}")
+    List<EventPageItemResponse> selectRecentByUserId(@Param("userId") String userId, @Param("limit") int limit);
+
     @Select({
             "<script>",
             "select e.id as event_id, e.event_name, e.event_type_id, t.type_code as event_type_code, t.type_name as event_type_name,",
@@ -124,6 +135,9 @@ public interface EventMapper {
             "left join rl_contact c on c.id = e.owner_contact_id",
             "<where>",
             "  e.status = 'NORMAL'",
+            "  <if test='userId != null and userId != \"\"'>",
+            "    and e.user_id = #{userId}",
+            "  </if>",
             "  <if test='eventOwnerType != null and eventOwnerType != \"\"'>",
             "    and e.event_owner_type = #{eventOwnerType}",
             "  </if>",
@@ -134,5 +148,5 @@ public interface EventMapper {
             "order by e.event_date desc, e.id desc",
             "</script>"
     })
-    List<EventByContactItemResponse> selectByContact(@Param("eventOwnerType") String eventOwnerType, @Param("ownerContactId") String ownerContactId);
+    List<EventByContactItemResponse> selectByContact(@Param("userId") String userId, @Param("eventOwnerType") String eventOwnerType, @Param("ownerContactId") String ownerContactId);
 }

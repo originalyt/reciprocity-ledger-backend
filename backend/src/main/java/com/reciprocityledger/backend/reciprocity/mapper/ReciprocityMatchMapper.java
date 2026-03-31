@@ -14,13 +14,13 @@ import java.util.List;
 @Mapper
 public interface ReciprocityMatchMapper {
 
-    @Select("select id, source_record_id, target_record_id, match_type, match_status, cancel_reason, remark, create_time, update_time from rl_reciprocity_match where id = #{matchId} limit 1")
+    @Select("select id, source_record_id, target_record_id, match_type, match_status, cancel_reason, remark, create_time, update_time, user_id from rl_reciprocity_match where id = #{matchId} limit 1")
     ReciprocityMatch selectById(@Param("matchId") String matchId);
 
-    @Select("select id, source_record_id, target_record_id, match_type, match_status, cancel_reason, remark, create_time, update_time from rl_reciprocity_match where match_status = 'ACTIVE' and (source_record_id = #{recordId} or target_record_id = #{recordId}) limit 1")
+    @Select("select id, source_record_id, target_record_id, match_type, match_status, cancel_reason, remark, create_time, update_time, user_id from rl_reciprocity_match where match_status = 'ACTIVE' and (source_record_id = #{recordId} or target_record_id = #{recordId}) limit 1")
     ReciprocityMatch selectActiveByRecordId(@Param("recordId") String recordId);
 
-    @Insert("insert into rl_reciprocity_match(id, source_record_id, target_record_id, match_type, match_status, cancel_reason, remark) values(#{id}, #{sourceRecordId}, #{targetRecordId}, #{matchType}, #{matchStatus}, #{cancelReason}, #{remark})")
+    @Insert("insert into rl_reciprocity_match(id, source_record_id, target_record_id, match_type, match_status, cancel_reason, remark, user_id) values(#{id}, #{sourceRecordId}, #{targetRecordId}, #{matchType}, #{matchStatus}, #{cancelReason}, #{remark}, #{userId})")
     int insert(ReciprocityMatch match);
 
     @Update("update rl_reciprocity_match set match_status = 'CANCELED', cancel_reason = #{cancelReason}, update_time = now() where id = #{matchId}")
@@ -38,6 +38,9 @@ public interface ReciprocityMatchMapper {
             "left join rl_gift_record mr on mr.id = case when m.source_record_id = r.id then m.target_record_id else m.source_record_id end",
             "<where>",
             "  1 = 1",
+            "  <if test='userId != null and userId != \"\"'>",
+            "    and r.user_id = #{userId}",
+            "  </if>",
             "  <if test='contactId != null and contactId != \"\"'>",
             "    and r.contact_id = #{contactId}",
             "  </if>",
@@ -58,7 +61,8 @@ public interface ReciprocityMatchMapper {
             "offset #{offset} limit #{pageSize}",
             "</script>"
     })
-    List<ReciprocityPageItemResponse> selectPage(@Param("contactId") String contactId,
+    List<ReciprocityPageItemResponse> selectPage(@Param("userId") String userId,
+                                                 @Param("contactId") String contactId,
                                                  @Param("eventTypeCode") String eventTypeCode,
                                                  @Param("reciprocityStatus") String reciprocityStatus,
                                                  @Param("startDate") LocalDate startDate,
@@ -74,6 +78,9 @@ public interface ReciprocityMatchMapper {
             "join rl_event_type t on t.id = e.event_type_id",
             "<where>",
             "  1 = 1",
+            "  <if test='userId != null and userId != \"\"'>",
+            "    and r.user_id = #{userId}",
+            "  </if>",
             "  <if test='contactId != null and contactId != \"\"'>",
             "    and r.contact_id = #{contactId}",
             "  </if>",
@@ -92,7 +99,8 @@ public interface ReciprocityMatchMapper {
             "</where>",
             "</script>"
     })
-    long countPage(@Param("contactId") String contactId,
+    long countPage(@Param("userId") String userId,
+                   @Param("contactId") String contactId,
                    @Param("eventTypeCode") String eventTypeCode,
                    @Param("reciprocityStatus") String reciprocityStatus,
                    @Param("startDate") LocalDate startDate,

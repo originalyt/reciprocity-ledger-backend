@@ -12,6 +12,10 @@ public final class ErrorCode {
     public static final int INVALID_DIRECTION = 4202;
     public static final int INVALID_EVENT_OWNER = 4203;
     public static final int INVALID_RECIPROCITY_OPERATION = 4204;
+    public static final int USER_NOT_FOUND = 4301;
+    public static final int USER_EMAIL_EXISTS = 4302;
+    public static final int USER_DISABLED = 4303;
+    public static final int INVALID_PASSWORD = 4304;
     public static final int SYSTEM_ERROR = 5000;
 
     private ErrorCode() {
