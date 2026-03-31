@@ -15,21 +15,21 @@ import java.util.List;
 @Configuration
 public class WebCorsConfig implements WebMvcConfigurer {
 
-    @Value("${app.cors.allowed-origin-patterns}")
+    @Value("${app.cors.allowed-origin-patterns:http://localhost:*,http://127.0.0.1:*}")
     private String allowedOriginPatterns;
 
     /**
      * 使用 origin pattern 而不是固定 origin，目的是兼容 Flutter Web 本地调试时的随机端口。
-     * 仅放开 POST 和 OPTIONS，保证当前接口约定不变，同时满足浏览器预检请求。
+     * 放开常用 HTTP 方法，满足浏览器预检请求。
      */
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         List<String> originPatternList = StrUtil.splitTrim(allowedOriginPatterns, ',');
         registry.addMapping("/**")
                 .allowedOriginPatterns(originPatternList.toArray(new String[0]))
-                .allowedMethods("POST", "OPTIONS")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
-                .allowCredentials(false)
+                .allowCredentials(true)
                 .maxAge(3600);
     }
 }

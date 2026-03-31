@@ -6,25 +6,67 @@ import '../../shared/models/ledger_models.dart';
 import '../repositories/api_ledger_repository.dart';
 import '../repositories/ledger_repository.dart';
 
-final apiClientProvider = Provider<ApiClient>((ref) {
-  return ApiClient();
-});
+/// Provider that creates ApiClient with WidgetRef for authenticated requests
+ApiClient createApiClient(WidgetRef ref) => ApiClient(ref: ref);
+
+/// Provider that creates LedgerRepository with WidgetRef for authenticated requests
+LedgerRepository createLedgerRepository(WidgetRef ref) =>
+    ApiLedgerRepository(createApiClient(ref));
+
+// ============================================
+// Data fetch functions - call these from widgets with WidgetRef
+// ============================================
+
+Future<HomeOverview> fetchHomeOverview(WidgetRef ref) =>
+    createLedgerRepository(ref).fetchHomeOverview();
+
+Future<List<ContactOption>> fetchContacts(WidgetRef ref, {String? keyword}) =>
+    createLedgerRepository(ref).fetchContacts(keyword: keyword);
+
+Future<ContactDetail> fetchContactDetail(WidgetRef ref, String contactId) =>
+    createLedgerRepository(ref).fetchContactDetail(contactId);
+
+Future<TimelineBundle> fetchSelfTimeline(WidgetRef ref, {RecordKind? kind}) =>
+    createLedgerRepository(ref).fetchSelfTimeline(kind: kind);
+
+Future<List<ReciprocityEventSummary>> fetchReciprocityList(
+        WidgetRef ref, ReciprocityStatus status) =>
+    createLedgerRepository(ref).fetchReciprocityList(status);
+
+Future<ReciprocityDetail> fetchReciprocityDetail(WidgetRef ref, String recordId) =>
+    createLedgerRepository(ref).fetchReciprocityDetail(recordId);
+
+Future<List<EventTypeOption>> fetchEventTypes(WidgetRef ref) =>
+    createLedgerRepository(ref).fetchEventTypes();
+
+Future<List<RelationTypeOption>> fetchRelationTypes(WidgetRef ref, {String? keyword}) =>
+    createLedgerRepository(ref).fetchRelationTypes(keyword: keyword);
+
+Future<List<EventOption>> fetchEventOptions(
+        WidgetRef ref, {required RecordKind kind, String? contactId}) =>
+    createLedgerRepository(ref).fetchEventOptions(kind: kind, contactId: contactId);
+
+Future<EventsByContact> fetchEventsByContact(WidgetRef ref, String contactId) =>
+    createLedgerRepository(ref).eventsByContact(contactId);
+
+Future<String> saveRecord(WidgetRef ref, RecordSaveDraft draft) =>
+    createLedgerRepository(ref).saveRecord(draft);
+
+Future<String> saveContact(WidgetRef ref, ContactSaveDraft draft) =>
+    createLedgerRepository(ref).saveContact(draft);
+
+Future<ContactQuickSaveResult> quickSaveContact(WidgetRef ref, ContactSaveDraft draft) =>
+    createLedgerRepository(ref).quickSaveContact(draft);
+
+Future<String> saveRecordWithEvent(WidgetRef ref, RecordSaveWithEventDraft draft) =>
+    createLedgerRepository(ref).saveRecordWithEvent(draft);
+
+// ============================================
+// State providers for filters (no auth needed)
+// ============================================
 
 final authApiProvider = Provider<AuthApi>((ref) {
   return const AuthApi();
-});
-
-final ledgerRepositoryProvider = Provider<LedgerRepository>((ref) {
-  return ApiLedgerRepository(ref.read(apiClientProvider));
-});
-
-final homeOverviewProvider = FutureProvider<HomeOverview>((ref) {
-  return ref.read(ledgerRepositoryProvider).fetchHomeOverview();
-});
-
-final contactsProvider = FutureProvider.autoDispose<List<ContactOption>>((ref) async {
-  final filter = ref.watch(contactsFilterProvider);
-  return ref.read(ledgerRepositoryProvider).fetchContacts(keyword: filter.keyword);
 });
 
 final contactsFilterProvider = NotifierProvider<ContactsFilterNotifier, ContactsFilter>(() {
@@ -63,11 +105,6 @@ class TimelineFilterNotifier extends Notifier<RecordKind?> {
   }
 }
 
-final selfTimelineProvider = FutureProvider<TimelineBundle>((ref) {
-  final filter = ref.watch(timelineFilterProvider);
-  return ref.read(ledgerRepositoryProvider).fetchSelfTimeline(kind: filter);
-});
-
 final reciprocityFilterProvider = NotifierProvider<ReciprocityFilterNotifier, ReciprocityStatus>(() {
   return ReciprocityFilterNotifier();
 });
@@ -80,28 +117,6 @@ class ReciprocityFilterNotifier extends Notifier<ReciprocityStatus> {
     state = status;
   }
 }
-
-final reciprocityListProvider = FutureProvider<List<ReciprocityEventSummary>>((ref) {
-  final filter = ref.watch(reciprocityFilterProvider);
-  return ref.read(ledgerRepositoryProvider).fetchReciprocityList(filter);
-});
-
-final contactDetailProvider = FutureProvider.family<ContactDetail, String>((ref, id) {
-  return ref.read(ledgerRepositoryProvider).fetchContactDetail(id);
-});
-
-final reciprocityDetailProvider = FutureProvider.family<ReciprocityDetail, String>((ref, id) {
-  return ref.read(ledgerRepositoryProvider).fetchReciprocityDetail(id);
-});
-
-final eventTypesProvider = FutureProvider<List<EventTypeOption>>((ref) {
-  return ref.read(ledgerRepositoryProvider).fetchEventTypes();
-});
-
-final relationTypesProvider = FutureProvider<List<RelationTypeOption>>((ref) {
-  final filter = ref.watch(relationTypesFilterProvider);
-  return ref.read(ledgerRepositoryProvider).fetchRelationTypes(keyword: filter.keyword);
-});
 
 final relationTypesFilterProvider = NotifierProvider<RelationTypesFilterNotifier, RelationTypesFilter>(() {
   return RelationTypesFilterNotifier();
@@ -125,11 +140,3 @@ class RelationTypesFilter {
     return RelationTypesFilter(keyword: keyword);
   }
 }
-
-final eventOptionsProvider = FutureProvider.family<List<EventOption>, ({RecordKind kind, String? contactId})>((ref, args) {
-  return ref.read(ledgerRepositoryProvider).fetchEventOptions(kind: args.kind, contactId: args.contactId);
-});
-
-final eventsByContactProvider = FutureProvider.family<EventsByContact, String>((ref, id) {
-  return ref.read(ledgerRepositoryProvider).eventsByContact(id);
-});

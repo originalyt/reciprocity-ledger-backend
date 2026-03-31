@@ -48,16 +48,16 @@ class ApiClient {
   Future<T> post<T>(
     String path,
     Map<String, dynamic> body, {
-    WidgetRef? ref,
     bool requireAuth = true,
     T Function(Object? json)? fromJsonT,
   }) async {
-    final effectiveRef = ref ?? _ref;
-    final options = Options(
-      headers: effectiveRef != null && requireAuth
-          ? {'Authorization': 'Bearer ${effectiveRef.read(tokenProvider)}'}
-          : {},
-    );
+    final options = Options();
+    if (requireAuth && _ref != null) {
+      final token = _ref!.read(tokenProvider);
+      if (token != null) {
+        options.headers = {'Authorization': 'Bearer $token'};
+      }
+    }
 
     try {
       final response = await _dio.post<Map<String, dynamic>>(path, data: body, options: options);

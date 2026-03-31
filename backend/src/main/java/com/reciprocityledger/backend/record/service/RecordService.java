@@ -87,12 +87,35 @@ public class RecordService {
     @Transactional(rollbackFor = Exception.class)
     public IdResponse save(RecordSaveRequest request) {
         contactService.requireContact(request.getContactId());
-        GiftEvent event = eventService.requireEvent(request.getEventId());
-        validateRecordAgainstEvent(request.getContactId(), event);
+
+        // 如果没有eventId，创建一个默认事件
+        String eventId = request.getEventId();
+        if (StrUtil.isBlank(eventId)) {
+            // 根据direction确定事件归属类型
+            String direction = normalizeDirection(request.getDirection(), true);
+            String eventOwnerType = RecordDirectionEnum.SEND.name().equals(direction)
+                    ? EventOwnerTypeEnum.CONTACT.name()
+                    : EventOwnerTypeEnum.SELF.name();
+
+            // 创建默认事件
+            IdResponse eventResponse = eventService.quickSave(
+                    RecordDirectionEnum.SEND.name().equals(direction) ? "随礼" : "收礼",
+                    null, // eventTypeId 可以为空，后端会处理
+                    eventOwnerType,
+                    RecordDirectionEnum.SEND.name().equals(direction) ? request.getContactId() : null,
+                    request.getRecordDate(),
+                    null
+            );
+            eventId = eventResponse.getId();
+        } else {
+            GiftEvent event = eventService.requireEvent(eventId);
+            validateRecordAgainstEvent(request.getContactId(), event);
+        }
+
         GiftRecord record = new GiftRecord();
         record.setId(idGenerator.nextId());
         record.setContactId(request.getContactId());
-        record.setEventId(request.getEventId());
+        record.setEventId(eventId);
         record.setDirection(normalizeDirection(request.getDirection(), true));
         record.setAmount(normalizeAmount(request.getAmount()));
         record.setRecordDate(request.getRecordDate());

@@ -12,7 +12,6 @@ public class RecordSaveRequest {
 
     @NotBlank(message = "contactId不能为空")
     private String contactId;
-    @NotBlank(message = "eventId不能为空")
     private String eventId;
     @NotBlank(message = "direction不能为空")
     private String direction;

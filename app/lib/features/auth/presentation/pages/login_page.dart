@@ -3,9 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/auth/auth_provider.dart';
-import '../../../../core/auth/auth_api.dart';
 import '../../../../shared/providers/app_providers.dart';
-import '../../../../shared/models/auth_models.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});

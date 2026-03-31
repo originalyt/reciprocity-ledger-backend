@@ -146,11 +146,15 @@ public class EventService {
 
     private void fillEvent(GiftEvent event, String eventName, String eventTypeId, String eventOwnerType, String ownerContactId, java.time.LocalDate eventDate, String remark) {
         event.setEventName(normalizeRequired(eventName, "eventName不能为空", 128));
-        EventTypeDict eventType = dictService.getEventType(eventTypeId);
-        if (eventType == null || !Boolean.TRUE.equals(eventType.getEnabledFlag())) {
-            throw new BusinessException(ErrorCode.EVENT_TYPE_NOT_FOUND, "事件类型不存在或已停用");
+        // eventTypeId 可以为空，用于简化记录创建
+        String normalizedEventTypeId = normalizeNullable(eventTypeId);
+        if (StrUtil.isNotBlank(normalizedEventTypeId)) {
+            EventTypeDict eventType = dictService.getEventType(normalizedEventTypeId);
+            if (eventType == null || !Boolean.TRUE.equals(eventType.getEnabledFlag())) {
+                throw new BusinessException(ErrorCode.EVENT_TYPE_NOT_FOUND, "事件类型不存在或已停用");
+            }
+            event.setEventTypeId(normalizedEventTypeId);
         }
-        event.setEventTypeId(eventTypeId);
         String normalizedOwnerType = normalizeRequired(eventOwnerType, "eventOwnerType不能为空", 16);
         if (!EventOwnerTypeEnum.SELF.name().equals(normalizedOwnerType) && !EventOwnerTypeEnum.CONTACT.name().equals(normalizedOwnerType)) {
             throw new BusinessException(ErrorCode.INVALID_EVENT_OWNER, "事件归属类型不合法");
