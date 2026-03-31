@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../shared/models/ledger_models.dart';
-import '../../../../shared/providers/mock_providers.dart';
+import '../../../../shared/providers/app_providers.dart';
 
 class QuickAddContactDialog extends ConsumerStatefulWidget {
   const QuickAddContactDialog({super.key});
@@ -22,6 +22,17 @@ class _QuickAddContactDialogState extends ConsumerState<QuickAddContactDialog> {
   String? _selectedRelationTypeCode;
   bool _submitting = false;
 
+  // Data
+  List<RelationTypeOption>? _relationTypes;
+  Object? _relationTypesError;
+  bool _loadingRelationTypes = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRelationTypes();
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -32,10 +43,34 @@ class _QuickAddContactDialogState extends ConsumerState<QuickAddContactDialog> {
     super.dispose();
   }
 
+  Future<void> _loadRelationTypes() async {
+    setState(() {
+      _loadingRelationTypes = true;
+      _relationTypesError = null;
+    });
+    try {
+      final relationTypes = await fetchRelationTypes(ref);
+      if (mounted) {
+        setState(() {
+          _relationTypes = relationTypes;
+          _loadingRelationTypes = false;
+          if (_selectedRelationTypeCode == null && relationTypes.isNotEmpty) {
+            _selectedRelationTypeCode = relationTypes.first.code;
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _relationTypesError = e;
+          _loadingRelationTypes = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final relationTypesAsync = ref.watch(relationTypesProvider);
-
     return AlertDialog(
       title: const Text('新建联系人'),
       content: SizedBox(
@@ -72,37 +107,33 @@ class _QuickAddContactDialogState extends ConsumerState<QuickAddContactDialog> {
                 decoration: const InputDecoration(labelText: '手机号'),
               ),
               const SizedBox(height: 16),
-              relationTypesAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stack) => const Text('加载关系类型失败'),
-                data: (relationTypes) {
-                  if (_selectedRelationTypeCode == null && relationTypes.isNotEmpty) {
-                    _selectedRelationTypeCode = relationTypes.first.code;
-                  }
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('关系类型 *', style: TextStyle(fontSize: 12)),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: relationTypes.map((item) {
-                          return ChoiceChip(
-                            label: Text(item.name),
-                            selected: _selectedRelationTypeCode == item.code,
-                            onSelected: (_) {
-                              setState(() {
-                                _selectedRelationTypeCode = item.code;
-                              });
-                            },
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  );
-                },
-              ),
+              if (_loadingRelationTypes)
+                const Center(child: CircularProgressIndicator())
+              else if (_relationTypesError != null)
+                const Text('加载关系类型失败')
+              else if (_relationTypes != null)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('关系类型 *', style: TextStyle(fontSize: 12)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _relationTypes!.map((item) {
+                        return ChoiceChip(
+                          label: Text(item.name),
+                          selected: _selectedRelationTypeCode == item.code,
+                          onSelected: (_) {
+                            setState(() {
+                              _selectedRelationTypeCode = item.code;
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _remarkController,
@@ -146,8 +177,8 @@ class _QuickAddContactDialogState extends ConsumerState<QuickAddContactDialog> {
     });
 
     try {
-      final repository = ref.read(ledgerRepositoryProvider);
-      final result = await repository.quickSaveContact(
+      final result = await quickSaveContact(
+        ref,
         ContactSaveDraft(
           name: _nameController.text.trim(),
           relationTypeCode: _selectedRelationTypeCode!,
@@ -161,8 +192,6 @@ class _QuickAddContactDialogState extends ConsumerState<QuickAddContactDialog> {
       if (!mounted) {
         return;
       }
-
-      ref.invalidate(contactsProvider);
 
       Navigator.of(context).pop(result);
     } catch (error) {
