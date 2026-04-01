@@ -205,7 +205,11 @@ class ApiLedgerRepository implements LedgerRepository {
 
   @override
   Future<String> saveRecord(RecordSaveDraft draft) async {
-    final eventId = draft.existingEventId ?? await _createEvent(draft);
+    // 事件是可选的，如果已有事件ID则使用，否则尝试创建新事件
+    String? eventId = draft.existingEventId;
+    if (eventId == null && draft.newEventType != null && draft.newEventName != null && draft.newEventName!.isNotEmpty) {
+      eventId = await _createEvent(draft);
+    }
     final result = await _apiClient.post('/app/record/save', {
       'contactId': draft.contactId,
       'eventId': eventId,
