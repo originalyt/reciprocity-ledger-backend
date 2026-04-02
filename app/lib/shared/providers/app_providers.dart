@@ -14,6 +14,21 @@ LedgerRepository createLedgerRepository(WidgetRef ref) =>
     ApiLedgerRepository(createApiClient(ref));
 
 // ============================================
+// Data refresh notification - trigger refresh when data changes
+// ============================================
+
+/// 数据刷新通知 Provider
+/// 当数据变更时（如新增记录），调用 ref.invalidate(dataRefreshProvider) 触发刷新
+final dataRefreshProvider = Provider<int>((ref) {
+  return 0;
+});
+
+/// 触发数据刷新
+void triggerDataRefresh(WidgetRef ref) {
+  ref.invalidate(dataRefreshProvider);
+}
+
+// ============================================
 // Data fetch functions - call these from widgets with WidgetRef
 // ============================================
 
@@ -60,6 +75,26 @@ Future<ContactQuickSaveResult> quickSaveContact(WidgetRef ref, ContactSaveDraft 
 
 Future<String> saveRecordWithEvent(WidgetRef ref, RecordSaveWithEventDraft draft) =>
     createLedgerRepository(ref).saveRecordWithEvent(draft);
+
+/// 简化的记录保存：自动创建或复用事件
+Future<String> saveRecordSimple(WidgetRef ref, RecordSaveSimpleDraft draft) =>
+    createLedgerRepository(ref).saveRecordSimple(draft);
+
+// 事件关联相关
+Future<String> saveEventRelation(WidgetRef ref, String selfEventId, String contactEventId) =>
+    createLedgerRepository(ref).saveEventRelation(selfEventId, contactEventId);
+
+Future<void> deleteEventRelation(WidgetRef ref, String id) =>
+    createLedgerRepository(ref).deleteEventRelation(id);
+
+Future<List<EventRelationVO>> fetchEventRelationList(WidgetRef ref, String selfEventId) =>
+    createLedgerRepository(ref).fetchEventRelationList(selfEventId);
+
+Future<List<SuggestRelationVO>> fetchSuggestRelations(WidgetRef ref, String selfEventId) =>
+    createLedgerRepository(ref).fetchSuggestRelations(selfEventId);
+
+Future<List<UnlinkedEventVO>> fetchUnlinkedEvents(WidgetRef ref, {String? eventTypeId}) =>
+    createLedgerRepository(ref).fetchUnlinkedEvents(eventTypeId: eventTypeId);
 
 // ============================================
 // State providers for filters (no auth needed)

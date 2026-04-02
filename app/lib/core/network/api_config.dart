@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 class ApiConfig {
   ApiConfig._();
 
-  static const int _defaultPort = 10086;
+  static const int _defaultPort = 10010;
 
   static String get baseUrl {
     const configured = String.fromEnvironment('API_BASE_URL', defaultValue: '');

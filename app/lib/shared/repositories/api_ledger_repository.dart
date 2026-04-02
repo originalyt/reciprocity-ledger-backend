@@ -285,6 +285,20 @@ class ApiLedgerRepository implements LedgerRepository {
     return _stringValue(result['id']);
   }
 
+  @override
+  Future<String> saveRecordSimple(RecordSaveSimpleDraft draft) async {
+    final result = await _apiClient.post('/app/record/save-simple', {
+      'contactId': draft.contactId,
+      'direction': draft.kind.backendDirection,
+      'amount': draft.amount.toStringAsFixed(2),
+      'recordDate': _dateString(draft.recordDate),
+      'eventTypeId': draft.eventTypeId,
+      'eventName': draft.eventName,
+      'remark': draft.recordRemark,
+    }, fromJsonT: (json) => _asMap(json));
+    return _stringValue(result['id']);
+  }
+
   Future<String> _createEvent(RecordSaveDraft draft) async {
     final eventType = draft.newEventType;
     if (eventType == null) {
@@ -445,5 +459,58 @@ class ApiLedgerRepository implements LedgerRepository {
     final month = value.month.toString().padLeft(2, '0');
     final day = value.day.toString().padLeft(2, '0');
     return '$year-$month-$day';
+  }
+
+  // 事件关联相关接口
+  @override
+  Future<String> saveEventRelation(String selfEventId, String contactEventId) async {
+    final result = await _apiClient.post('/app/event/relation/save', {
+      'selfEventId': selfEventId,
+      'contactEventId': contactEventId,
+    }, fromJsonT: (json) => _asMap(json));
+    return _stringValue(result['id']);
+  }
+
+  @override
+  Future<void> deleteEventRelation(String id) async {
+    await _apiClient.post('/app/event/relation/delete', {'id': id}, fromJsonT: (_) => null);
+  }
+
+  @override
+  Future<List<EventRelationVO>> fetchEventRelationList(String selfEventId) async {
+    return _apiClient.post('/app/event/relation/list', {
+      'selfEventId': selfEventId,
+    }, fromJsonT: (json) {
+      final map = _asMap(json);
+      return _asList(map['list']).map((item) {
+        return EventRelationVO.fromJson(_asMap(item));
+      }).toList();
+    });
+  }
+
+  @override
+  Future<List<SuggestRelationVO>> fetchSuggestRelations(String selfEventId) async {
+    return _apiClient.post('/app/event/relation/suggest', {
+      'selfEventId': selfEventId,
+    }, fromJsonT: (json) {
+      final map = _asMap(json);
+      return _asList(map['list']).map((item) {
+        return SuggestRelationVO.fromJson(_asMap(item));
+      }).toList();
+    });
+  }
+
+  @override
+  Future<List<UnlinkedEventVO>> fetchUnlinkedEvents({String? eventTypeId, int pageNo = 1, int pageSize = 20}) async {
+    return _apiClient.post('/app/event/relation/unlinked', {
+      'eventTypeId': eventTypeId,
+      'pageNo': pageNo,
+      'pageSize': pageSize,
+    }, fromJsonT: (json) {
+      final page = _asMap(json);
+      return _asList(page['list']).map((item) {
+        return UnlinkedEventVO.fromJson(_asMap(item));
+      }).toList();
+    });
   }
 }

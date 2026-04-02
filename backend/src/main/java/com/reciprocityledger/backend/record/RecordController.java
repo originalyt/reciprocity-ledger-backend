@@ -8,6 +8,7 @@ import com.reciprocityledger.backend.record.dto.request.RecordDetailRequest;
 import com.reciprocityledger.backend.record.dto.request.RecordPageRequest;
 import com.reciprocityledger.backend.record.dto.request.RecordQuickSaveContactRequest;
 import com.reciprocityledger.backend.record.dto.request.RecordSaveRequest;
+import com.reciprocityledger.backend.record.dto.request.RecordSaveSimpleRequest;
 import com.reciprocityledger.backend.record.dto.request.RecordSaveWithEventRequest;
 import com.reciprocityledger.backend.record.dto.request.RecordUpdateRequest;
 import com.reciprocityledger.backend.record.dto.request.SelfTimelineRequest;
@@ -46,6 +47,11 @@ public class RecordController {
     @PostMapping("/app/record/save-with-event")
     public ApiResponse<IdResponse> saveWithEvent(@Valid @RequestBody RecordSaveWithEventRequest request) {
         return ApiResponse.success(recordService.saveWithEvent(request));
+    }
+
+    @PostMapping("/app/record/save-simple")
+    public ApiResponse<IdResponse> saveSimple(@Valid @RequestBody RecordSaveSimpleRequest request) {
+        return ApiResponse.success(recordService.saveSimple(request));
     }
 
     @PostMapping("/app/record/update")

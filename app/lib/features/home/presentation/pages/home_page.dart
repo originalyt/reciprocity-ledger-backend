@@ -29,6 +29,15 @@ class _HomePageState extends ConsumerState<HomePage> {
     _loadData();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 监听数据刷新通知，当其他页面触发刷新时重新加载数据
+    // 使用 ref.read 读取 refreshCount，当 invalidate 后值会变化
+    ref.watch(dataRefreshProvider);
+    _loadData();
+  }
+
   Future<void> _loadData() async {
     setState(() {
       _isLoading = true;
@@ -180,6 +189,12 @@ class _HomePageState extends ConsumerState<HomePage> {
                         title: '闭环记录',
                         subtitle: '查看闭环状态列表',
                         onTap: () => context.go('/reciprocity'),
+                      ),
+                      _QuickActionTile(
+                        icon: Icons.notifications_active_outlined,
+                        title: '待还提醒',
+                        subtitle: '查看未关联的送礼事件',
+                        onTap: () => context.push('/event/unlinked'),
                       ),
                     ],
                   ),

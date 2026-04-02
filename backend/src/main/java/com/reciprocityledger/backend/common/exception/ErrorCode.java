@@ -8,10 +8,15 @@ public final class ErrorCode {
     public static final int EVENT_TYPE_NOT_FOUND = 4103;
     public static final int RECORD_NOT_FOUND = 4104;
     public static final int RECIPROCITY_MATCH_NOT_FOUND = 4105;
+    public static final int EVENT_RELATION_EXISTS = 4106;
+    public static final int EVENT_RELATION_NOT_FOUND = 4107;
     public static final int INVALID_AMOUNT = 4201;
     public static final int INVALID_DIRECTION = 4202;
     public static final int INVALID_EVENT_OWNER = 4203;
     public static final int INVALID_RECIPROCITY_OPERATION = 4204;
+    public static final int EVENT_RELATION_TYPE_MISMATCH = 4205;
+    public static final int EVENT_RELATION_OWNER_TYPE_INVALID = 4206;
+    public static final int CONTACT_EVENT_ALREADY_LINKED = 4207;
     public static final int USER_NOT_FOUND = 4301;
     public static final int USER_EMAIL_EXISTS = 4302;
     public static final int USER_DISABLED = 4303;

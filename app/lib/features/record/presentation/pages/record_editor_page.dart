@@ -30,20 +30,13 @@ class _RecordEditorPageState extends ConsumerState<RecordEditorPage> {
   late RecordKind _selectedKind;
   late DateTime _selectedDate;
   String? _selectedContactId;
-  String? _selectedExistingEventId;
   EventTypeOption? _selectedEventType;
-  bool _createNewEvent = false;
   bool _submitting = false;
 
   // Data
   List<ContactOption>? _contacts;
   Object? _contactsError;
   bool _loadingContacts = true;
-
-  // Events
-  EventsByContact? _eventsByContact;
-  Object? _eventsError;
-  bool _loadingEvents = false;
 
   // Event types
   List<EventTypeOption>? _eventTypes;
@@ -82,10 +75,6 @@ class _RecordEditorPageState extends ConsumerState<RecordEditorPage> {
             _selectedContactId = contacts.first.id;
           }
         });
-        // Load events for the selected contact
-        if (_selectedContactId != null) {
-          _loadEvents(_selectedContactId!);
-        }
       }
     } catch (e) {
       if (mounted) {
@@ -95,7 +84,6 @@ class _RecordEditorPageState extends ConsumerState<RecordEditorPage> {
         });
       }
     }
-    // Load event types
     _loadEventTypes();
   }
 
@@ -125,31 +113,6 @@ class _RecordEditorPageState extends ConsumerState<RecordEditorPage> {
     }
   }
 
-  Future<void> _loadEvents(String contactId) async {
-    setState(() {
-      _loadingEvents = true;
-      _eventsError = null;
-    });
-    try {
-      final events = await fetchEventsByContact(ref, contactId);
-      if (mounted) {
-        setState(() {
-          _eventsByContact = events;
-          _loadingEvents = false;
-          // Reset selected event when contact changes
-          _selectedExistingEventId = null;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _eventsError = e;
-          _loadingEvents = false;
-        });
-      }
-    }
-  }
-
   /// 将新联系人添加到列表开头并选中
   void _addNewContact(ContactQuickSaveResult result, String relationTypeName) {
     final newContact = ContactOption(
@@ -160,9 +123,7 @@ class _RecordEditorPageState extends ConsumerState<RecordEditorPage> {
     setState(() {
       _contacts = [newContact, ...?_contacts];
       _selectedContactId = result.contactId;
-      _selectedExistingEventId = null;
     });
-    _loadEvents(result.contactId);
   }
 
   @override
@@ -216,9 +177,7 @@ class _RecordEditorPageState extends ConsumerState<RecordEditorPage> {
                       if (_selectedContactId != contact.id) {
                         setState(() {
                           _selectedContactId = contact.id;
-                          _selectedExistingEventId = null;
                         });
-                        _loadEvents(contact.id);
                       }
                     },
                   );
@@ -238,41 +197,15 @@ class _RecordEditorPageState extends ConsumerState<RecordEditorPage> {
                 onSelectionChanged: (selection) {
                   setState(() {
                     _selectedKind = selection.first;
-                    // Reset selected event when kind changes
-                    _selectedExistingEventId = null;
                   });
                 },
               ),
             ),
             const SizedBox(height: 16),
             LedgerSectionCard(
-              title: '事件',
-              subtitle: _selectedKind == RecordKind.give
-                  ? '随礼默认读取该联系人的联系人事件'
-                  : '收礼默认读取本人的自有事件',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('新建事件后保存记录'),
-                    value: _createNewEvent,
-                    onChanged: (value) {
-                      setState(() {
-                        _createNewEvent = value;
-                        if (value) {
-                          _selectedExistingEventId = null;
-                        }
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  if (!_createNewEvent)
-                    _buildEventSelector()
-                  else
-                    _buildNewEventForm(),
-                ],
-              ),
+              title: '事由',
+              subtitle: '选择事件类型',
+              child: _buildEventTypeSelector(),
             ),
             const SizedBox(height: 16),
             LedgerSectionCard(
@@ -345,81 +278,7 @@ class _RecordEditorPageState extends ConsumerState<RecordEditorPage> {
     }
   }
 
-  Widget _buildEventSelector() {
-    if (_selectedContactId == null) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: Text('请先选择联系人'),
-      );
-    }
-
-    if (_loadingEvents) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (_eventsError != null) {
-      final message = _eventsError is ApiException ? (_eventsError as ApiException).message : '事件加载失败';
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Row(
-          children: [
-            Expanded(child: Text(message)),
-            TextButton(
-              onPressed: () => _loadEvents(_selectedContactId!),
-              child: const Text('重试'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_eventsByContact == null) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: Text('暂无事件数据'),
-      );
-    }
-
-    final showSelfEvents = _selectedKind == RecordKind.receive;
-    final eventsToShow = showSelfEvents ? _eventsByContact!.selfEventList : _eventsByContact!.contactEventList;
-
-    if (eventsToShow.isEmpty) {
-      return const Text('当前没有可选事件，请打开"新建事件后保存记录"。');
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (_eventsByContact!.selfEventList.isNotEmpty && _eventsByContact!.contactEventList.isNotEmpty) ...[
-          Text(
-            showSelfEvents ? '本人事件' : '联系人事件',
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
-          const SizedBox(height: 8),
-        ],
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: eventsToShow.map((event) {
-            return ChoiceChip(
-              label: Text('${event.eventTypeName} · ${event.name}'),
-              selected: _selectedExistingEventId == event.id,
-              onSelected: (_) {
-                setState(() {
-                  _selectedExistingEventId = event.id;
-                });
-              },
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNewEventForm() {
+  Widget _buildEventTypeSelector() {
     if (_loadingEventTypes) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 12),
@@ -471,13 +330,10 @@ class _RecordEditorPageState extends ConsumerState<RecordEditorPage> {
         const SizedBox(height: 16),
         TextFormField(
           controller: _eventNameController,
-          decoration: const InputDecoration(labelText: '事件名称'),
-          validator: (value) {
-            if (_createNewEvent && (value == null || value.trim().isEmpty)) {
-              return '请输入事件名称';
-            }
-            return null;
-          },
+          decoration: const InputDecoration(
+            labelText: '事件名称（可选）',
+            hintText: '不填则使用事件类型名称',
+          ),
         ),
       ],
     );
@@ -501,8 +357,8 @@ class _RecordEditorPageState extends ConsumerState<RecordEditorPage> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    if (!_createNewEvent && _selectedExistingEventId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('请选择一个已有事件，或开启新建事件')));
+    if (_selectedEventType == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('请选择事件类型')));
       return;
     }
 
@@ -517,43 +373,28 @@ class _RecordEditorPageState extends ConsumerState<RecordEditorPage> {
     });
 
     try {
-      if (_createNewEvent) {
-        // 新建事件并保存记录
-        await saveRecordWithEvent(
-          ref,
-          RecordSaveWithEventDraft(
-            contactId: _selectedContactId!,
-            kind: _selectedKind,
-            recordDate: _selectedDate,
-            amount: amount,
-            recordRemark: _remarkController.text.trim(),
-            eventName: _eventNameController.text.trim(),
-            eventTypeId: _selectedEventType!.id,
-            eventOwnerType: _selectedKind.eventOwnerType,
-            ownerContactId: _selectedKind == RecordKind.give ? _selectedContactId : null,
-            eventRemark: '',
-          ),
-        );
-      } else {
-        // 选择已有事件保存记录
-        await saveRecord(
-          ref,
-          RecordSaveDraft(
-            contactId: _selectedContactId!,
-            kind: _selectedKind,
-            recordDate: _selectedDate,
-            amount: amount,
-            recordRemark: _remarkController.text.trim(),
-            existingEventId: _selectedExistingEventId,
-            newEventName: null,
-            newEventType: null,
-          ),
-        );
-      }
+      // 使用简化的保存方式：自动处理事件
+      await saveRecordSimple(
+        ref,
+        RecordSaveSimpleDraft(
+          contactId: _selectedContactId!,
+          kind: _selectedKind,
+          recordDate: _selectedDate,
+          amount: amount,
+          eventTypeId: _selectedEventType!.id,
+          eventName: _eventNameController.text.trim().isEmpty
+              ? null
+              : _eventNameController.text.trim(),
+          recordRemark: _remarkController.text.trim(),
+        ),
+      );
 
       if (!mounted) {
         return;
       }
+
+      // 触发首页数据刷新
+      triggerDataRefresh(ref);
 
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('记录已保存')));
       context.pop();

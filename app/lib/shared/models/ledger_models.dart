@@ -387,6 +387,26 @@ class ReciprocityDetail {
   final ReciprocityManualInfo? manualInfo;
 }
 
+class RecordSaveSimpleDraft {
+  const RecordSaveSimpleDraft({
+    required this.contactId,
+    required this.kind,
+    required this.recordDate,
+    required this.amount,
+    required this.eventTypeId,
+    this.eventName,
+    this.recordRemark,
+  });
+
+  final String contactId;
+  final RecordKind kind;
+  final DateTime recordDate;
+  final double amount;
+  final String eventTypeId;
+  final String? eventName;
+  final String? recordRemark;
+}
+
 class RecordSaveDraft {
   const RecordSaveDraft({
     required this.contactId,
@@ -479,4 +499,97 @@ class RecordSaveWithEventDraft {
   final String eventOwnerType;
   final String? ownerContactId;
   final String? eventRemark;
+}
+
+/// 事件关联VO
+class EventRelationVO {
+  const EventRelationVO({
+    required this.id,
+    required this.contactEventId,
+    required this.eventName,
+    required this.eventDate,
+    required this.contactName,
+    required this.sendAmount,
+  });
+
+  final String id;
+  final String contactEventId;
+  final String eventName;
+  final DateTime eventDate;
+  final String contactName;
+  final double sendAmount;
+
+  factory EventRelationVO.fromJson(Map<String, dynamic> json) {
+    return EventRelationVO(
+      id: json['id'] as String,
+      contactEventId: json['contactEventId'] as String,
+      eventName: json['eventName'] as String,
+      eventDate: DateTime.parse(json['eventDate'] as String),
+      contactName: json['contactName'] as String,
+      sendAmount: (json['sendAmount'] as num).toDouble(),
+    );
+  }
+}
+
+/// 可关联事件建议VO
+class SuggestRelationVO {
+  const SuggestRelationVO({
+    required this.eventId,
+    required this.eventName,
+    required this.eventDate,
+    required this.contactName,
+    required this.sendAmount,
+  });
+
+  final String eventId;
+  final String eventName;
+  final DateTime eventDate;
+  final String contactName;
+  final double sendAmount;
+
+  factory SuggestRelationVO.fromJson(Map<String, dynamic> json) {
+    return SuggestRelationVO(
+      eventId: json['eventId'] as String,
+      eventName: json['eventName'] as String,
+      eventDate: DateTime.parse(json['eventDate'] as String),
+      contactName: json['contactName'] as String,
+      sendAmount: (json['sendAmount'] as num).toDouble(),
+    );
+  }
+}
+
+/// 未关联事件VO（待还提醒）
+class UnlinkedEventVO {
+  const UnlinkedEventVO({
+    required this.eventId,
+    required this.eventName,
+    required this.eventTypeId,
+    required this.eventTypeName,
+    required this.eventDate,
+    required this.contactId,
+    required this.contactName,
+    required this.sendAmount,
+  });
+
+  final String eventId;
+  final String eventName;
+  final String eventTypeId;
+  final String eventTypeName;
+  final DateTime eventDate;
+  final String contactId;
+  final String contactName;
+  final double sendAmount;
+
+  factory UnlinkedEventVO.fromJson(Map<String, dynamic> json) {
+    return UnlinkedEventVO(
+      eventId: json['eventId'] as String,
+      eventName: json['eventName'] as String,
+      eventTypeId: json['eventTypeId'] as String,
+      eventTypeName: json['eventTypeName'] as String,
+      eventDate: DateTime.parse(json['eventDate'] as String),
+      contactId: json['contactId'] as String,
+      contactName: json['contactName'] as String,
+      sendAmount: (json['sendAmount'] as num).toDouble(),
+    );
+  }
 }

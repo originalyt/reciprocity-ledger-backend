@@ -7,6 +7,8 @@ import '../../core/widgets/ledger_bottom_nav_scaffold.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/contact/presentation/pages/contact_detail_page.dart';
+import '../../features/event/presentation/pages/event_relation_page.dart';
+import '../../features/event/presentation/pages/unlinked_events_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/record/presentation/pages/record_editor_page.dart';
@@ -84,6 +86,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             eventId: state.pathParameters['eventId']!,
           );
         },
+      ),
+      GoRoute(
+        path: '/event/relation/:eventId',
+        builder: (context, state) {
+          return EventRelationPage(
+            selfEventId: state.pathParameters['eventId']!,
+            selfEventName: state.uri.queryParameters['name'],
+          );
+        },
+      ),
+      GoRoute(
+        path: '/event/unlinked',
+        builder: (context, state) => const UnlinkedEventsPage(),
       ),
       GoRoute(
         path: '/login',

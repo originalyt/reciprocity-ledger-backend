@@ -12,6 +12,7 @@ import com.reciprocityledger.backend.common.id.IdGenerator;
 import com.reciprocityledger.backend.common.util.PageUtils;
 import com.reciprocityledger.backend.contact.entity.Contact;
 import com.reciprocityledger.backend.contact.service.ContactService;
+import com.reciprocityledger.backend.dict.service.DictService;
 import com.reciprocityledger.backend.event.entity.GiftEvent;
 import com.reciprocityledger.backend.event.service.EventService;
 import com.reciprocityledger.backend.reciprocity.service.ReciprocityService;
@@ -20,6 +21,7 @@ import com.reciprocityledger.backend.record.dto.request.RecordDetailRequest;
 import com.reciprocityledger.backend.record.dto.request.RecordPageRequest;
 import com.reciprocityledger.backend.record.dto.request.RecordQuickSaveContactRequest;
 import com.reciprocityledger.backend.record.dto.request.RecordSaveRequest;
+import com.reciprocityledger.backend.record.dto.request.RecordSaveSimpleRequest;
 import com.reciprocityledger.backend.record.dto.request.RecordSaveWithEventRequest;
 import com.reciprocityledger.backend.record.dto.request.RecordUpdateRequest;
 import com.reciprocityledger.backend.record.dto.request.SelfTimelineRequest;
@@ -46,6 +48,7 @@ public class RecordService {
     private final RecordMapper recordMapper;
     private final ContactService contactService;
     private final EventService eventService;
+    private final DictService dictService;
     private final ReciprocityService reciprocityService;
     private final IdGenerator idGenerator;
 
@@ -146,6 +149,64 @@ public class RecordService {
         saveRequest.setRecordDate(request.getRecordDate());
         saveRequest.setRemark(request.getRecordRemark());
         return save(saveRequest);
+    }
+
+    /**
+     * 简化的记录保存：自动创建或复用事件。
+     * 用户只需选择事件类型，后端自动处理事件的创建或复用。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public IdResponse saveSimple(RecordSaveSimpleRequest request) {
+        contactService.requireContact(request.getContactId());
+
+        String direction = normalizeDirection(request.getDirection(), true);
+
+        // 确定事件归属类型：随礼(SEND) -> 联系人事件，收礼(RECEIVE) -> 本人事件
+        String eventOwnerType = RecordDirectionEnum.SEND.name().equals(direction)
+                ? EventOwnerTypeEnum.CONTACT.name()
+                : EventOwnerTypeEnum.SELF.name();
+
+        // 确定事件归属联系人：随礼时为当前联系人，收礼时为null
+        String ownerContactId = RecordDirectionEnum.SEND.name().equals(direction)
+                ? request.getContactId()
+                : null;
+
+        // 确定事件名称
+        String eventName = request.getEventName();
+        if (StrUtil.isBlank(eventName)) {
+            // 如果未提供事件名称，使用事件类型名称
+            var eventType = dictService.getEventType(request.getEventTypeId());
+            if (eventType != null) {
+                eventName = eventType.getTypeName();
+            } else {
+                eventName = RecordDirectionEnum.SEND.name().equals(direction) ? "随礼" : "收礼";
+            }
+        }
+
+        // 创建事件
+        IdResponse eventResponse = eventService.quickSave(
+                eventName,
+                request.getEventTypeId(),
+                eventOwnerType,
+                ownerContactId,
+                request.getRecordDate(),
+                null
+        );
+
+        // 创建记录
+        GiftRecord record = new GiftRecord();
+        record.setId(idGenerator.nextId());
+        record.setContactId(request.getContactId());
+        record.setEventId(eventResponse.getId());
+        record.setDirection(direction);
+        record.setAmount(normalizeAmount(request.getAmount()));
+        record.setRecordDate(request.getRecordDate());
+        record.setRemark(normalizeNullableLength(request.getRemark(), 500));
+        record.setReciprocityStatus(ReciprocityStatusEnum.UNMATCHED.name());
+        record.setUserId(UserContext.getUserId());
+        recordMapper.insert(record);
+        reciprocityService.rebuildForRecord(record.getId());
+        return new IdResponse(record.getId());
     }
 
     @Transactional(rollbackFor = Exception.class)

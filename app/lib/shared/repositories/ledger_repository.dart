@@ -15,4 +15,14 @@ abstract class LedgerRepository {
   Future<ContactQuickSaveResult> quickSaveContact(ContactSaveDraft draft);
   Future<EventsByContact> eventsByContact(String contactId);
   Future<String> saveRecordWithEvent(RecordSaveWithEventDraft draft);
+
+  /// 简化的记录保存：自动创建或复用事件
+  Future<String> saveRecordSimple(RecordSaveSimpleDraft draft);
+
+  // 事件关联相关
+  Future<String> saveEventRelation(String selfEventId, String contactEventId);
+  Future<void> deleteEventRelation(String id);
+  Future<List<EventRelationVO>> fetchEventRelationList(String selfEventId);
+  Future<List<SuggestRelationVO>> fetchSuggestRelations(String selfEventId);
+  Future<List<UnlinkedEventVO>> fetchUnlinkedEvents({String? eventTypeId, int pageNo = 1, int pageSize = 20});
 }
