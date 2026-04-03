@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'api_config.dart';
@@ -62,11 +63,15 @@ class ApiClient {
     try {
       final response = await _dio.post<Map<String, dynamic>>(path, data: body, options: options);
       final payload = response.data ?? const <String, dynamic>{};
+      debugPrint('API Response: $payload');
       final apiResponse = ApiResponse.fromJson(payload, fromJsonT!);
       if (apiResponse.code != 0) {
         throw ApiException(code: apiResponse.code, message: apiResponse.message);
       }
-      return apiResponse.data;
+      if (apiResponse.data == null) {
+        throw ApiException(code: -1, message: '服务器返回数据为空');
+      }
+      return apiResponse.data as T;
     } on DioException catch (error) {
       final message = error.message ??
           '连接后端服务失败，请确认接口地址 ${ApiConfig.baseUrl} 可访问，且后端服务已启动';

@@ -7,7 +7,7 @@ class ApiResponse<T> {
 
   final int code;
   final String message;
-  final T data;
+  final T? data;
 
   factory ApiResponse.fromJson(
     Map<String, dynamic> json,
@@ -16,7 +16,7 @@ class ApiResponse<T> {
     return ApiResponse<T>(
       code: json['code'] as int? ?? -1,
       message: json['message'] as String? ?? '未知错误',
-      data: fromJsonT(json['data']),
+      data: json['data'] == null ? null : fromJsonT(json['data']),
     );
   }
 }

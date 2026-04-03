@@ -115,40 +115,67 @@ class _ReciprocityPageState extends ConsumerState<ReciprocityPage> {
                   )
                 : Column(
                     children: items.map((item) {
+                      final selfRecord = item.selfRecord;
+                      final contactRecord = item.contactRecord;
                       return InkWell(
-                        onTap: () => context.push('/reciprocity/${item.recordId}'),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          child: Row(
+                        onTap: () => context.push('/reciprocity/${item.matchId}'),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(color: theme.dividerColor.withValues(alpha: 0.3)),
+                            ),
+                          ),
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              LedgerStatusChip.status(status: item.status),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(item.contactName, style: theme.textTheme.titleMedium),
-                                    const SizedBox(height: 4),
-                                    Text('${item.eventTypeName} / ${item.eventName}', style: theme.textTheme.bodyMedium),
-                                    const SizedBox(height: 4),
-                                    Text('方向：${item.kind.label}', style: theme.textTheme.bodyMedium),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
+                              // 标题行：事件类型 + 状态
+                              Row(
                                 children: [
-                                  Text(LedgerFormatters.amount(item.amount), style: theme.textTheme.titleMedium),
-                                  const SizedBox(height: 4),
-                                  Text(LedgerFormatters.monthDay(item.recordDate), style: theme.textTheme.bodyMedium),
-                                  if (item.matchedAmount != null) ...[
-                                    const SizedBox(height: 4),
-                                    Text('匹配 ${LedgerFormatters.amount(item.matchedAmount!)}', style: theme.textTheme.bodyMedium),
-                                  ],
+                                  Text(item.eventTypeName, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                                  const SizedBox(width: 8),
+                                  LedgerStatusChip.status(status: item.status),
                                 ],
                               ),
+                              const SizedBox(height: 8),
+                              // 联系人
+                              Padding(
+                                padding: const EdgeInsets.only(left: 8),
+                                child: Text('联系人：${item.contactName}', style: theme.textTheme.bodyMedium),
+                              ),
+                              const SizedBox(height: 8),
+                              // 联系人事件（我随礼）
+                              if (contactRecord != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 16),
+                                  child: Row(
+                                    children: [
+                                      const Text('├─ ', style: TextStyle(fontFamily: 'monospace')),
+                                      Expanded(
+                                        child: Text(
+                                          '${contactRecord.eventName}：我随礼 ${LedgerFormatters.amount(contactRecord.amount)} (${LedgerFormatters.monthDay(contactRecord.recordDate)})',
+                                          style: theme.textTheme.bodyMedium,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              // 我方事件（对方回礼）
+                              if (selfRecord != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 16),
+                                  child: Row(
+                                    children: [
+                                      const Text('└─ ', style: TextStyle(fontFamily: 'monospace')),
+                                      Expanded(
+                                        child: Text(
+                                          '${selfRecord.eventName}：${item.contactName}回礼 ${LedgerFormatters.amount(selfRecord.amount)} (${LedgerFormatters.monthDay(selfRecord.recordDate)})',
+                                          style: theme.textTheme.bodyMedium,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                             ],
                           ),
                         ),

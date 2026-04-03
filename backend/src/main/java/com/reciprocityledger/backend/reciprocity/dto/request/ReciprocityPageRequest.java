@@ -11,7 +11,7 @@ import java.time.LocalDate;
 public class ReciprocityPageRequest extends PageRequest {
 
     private String contactId;
-    private String eventTypeCode;
+    private String eventTypeId;
     private String reciprocityStatus;
     private LocalDate startDate;
     private LocalDate endDate;

@@ -277,38 +277,62 @@ class ContactDetail {
   final List<TimelineEntry> timeline;
 }
 
-class ReciprocityEventSummary {
-  const ReciprocityEventSummary({
-    required this.recordId,
-    required this.contactId,
-    required this.contactName,
+class ReciprocityRecordItem {
+  const ReciprocityRecordItem({
     required this.eventId,
     required this.eventName,
-    required this.eventTypeCode,
-    required this.eventTypeName,
-    required this.kind,
+    required this.eventOwnerType,
     required this.amount,
     required this.recordDate,
-    required this.status,
-    this.matchedRecordId,
-    this.matchedAmount,
-    this.matchedRecordDate,
   });
 
-  final String recordId;
-  final String contactId;
-  final String contactName;
   final String eventId;
   final String eventName;
-  final String eventTypeCode;
-  final String eventTypeName;
-  final RecordKind kind;
+  final String eventOwnerType;
   final double amount;
   final DateTime recordDate;
+}
+
+class ReciprocityEventSummary {
+  const ReciprocityEventSummary({
+    required this.matchId,
+    required this.contactId,
+    required this.contactName,
+    required this.eventTypeId,
+    required this.eventTypeName,
+    required this.matchType,
+    required this.status,
+    required this.records,
+  });
+
+  final String matchId;
+  final String contactId;
+  final String contactName;
+  final String eventTypeId;
+  final String eventTypeName;
+  final String matchType;
   final ReciprocityStatus status;
-  final String? matchedRecordId;
-  final double? matchedAmount;
-  final DateTime? matchedRecordDate;
+  final List<ReciprocityRecordItem> records;
+
+  /// 获取SELF事件（我办的事件，对方随礼）
+  ReciprocityRecordItem? get selfRecord {
+    for (final record in records) {
+      if (record.eventOwnerType == 'SELF') {
+        return record;
+      }
+    }
+    return null;
+  }
+
+  /// 获取CONTACT事件（联系人办的事件，我随礼）
+  ReciprocityRecordItem? get contactRecord {
+    for (final record in records) {
+      if (record.eventOwnerType == 'CONTACT') {
+        return record;
+      }
+    }
+    return null;
+  }
 }
 
 class RecordInfo {

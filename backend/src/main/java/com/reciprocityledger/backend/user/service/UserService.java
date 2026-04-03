@@ -1,7 +1,6 @@
 package com.reciprocityledger.backend.user.service;
 
 import cn.hutool.core.util.StrUtil;
-import com.reciprocityledger.backend.common.api.IdResponse;
 import com.reciprocityledger.backend.common.exception.BusinessException;
 import com.reciprocityledger.backend.common.exception.ErrorCode;
 import com.reciprocityledger.backend.common.id.IdGenerator;

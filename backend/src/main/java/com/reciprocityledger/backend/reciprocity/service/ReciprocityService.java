@@ -33,7 +33,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -48,12 +51,55 @@ public class ReciprocityService {
         int pageNo = PageUtils.safePageNo(request.getPageNo());
         int pageSize = PageUtils.safePageSize(request.getPageSize());
         String contactId = normalizeNullable(request.getContactId());
-        String eventTypeCode = normalizeNullable(request.getEventTypeCode());
+        String eventTypeId = normalizeNullable(request.getEventTypeId());
         String reciprocityStatus = normalizeNullable(request.getReciprocityStatus());
         String userId = UserContext.getUserId();
-        List<ReciprocityPageItemResponse> list = reciprocityMatchMapper.selectPage(userId, contactId, eventTypeCode, reciprocityStatus, request.getStartDate(), request.getEndDate(), PageUtils.offset(pageNo, pageSize), pageSize);
-        long total = reciprocityMatchMapper.countPage(userId, contactId, eventTypeCode, reciprocityStatus, request.getStartDate(), request.getEndDate());
-        return PageResponse.of(list, pageNo, pageSize, total);
+
+        // 查询总数
+        long total = reciprocityMatchMapper.countPage(userId, contactId, eventTypeId, reciprocityStatus, request.getStartDate(), request.getEndDate());
+
+        // 查询数据并在内存中聚合
+        List<ReciprocityPageItemResponse> rawList = reciprocityMatchMapper.selectPage(
+                userId, contactId, eventTypeId, reciprocityStatus,
+                request.getStartDate(), request.getEndDate(), pageSize * 2);
+
+        // 按reciprocityMatchId聚合
+        List<ReciprocityPageItemResponse> aggregatedList = aggregateReciprocityRecords(rawList, pageSize);
+
+        return PageResponse.of(aggregatedList, pageNo, pageSize, total);
+    }
+
+    private List<ReciprocityPageItemResponse> aggregateReciprocityRecords(List<ReciprocityPageItemResponse> rawList, int pageSize) {
+        Map<String, ReciprocityPageItemResponse> matchMap = new LinkedHashMap<>();
+        for (ReciprocityPageItemResponse item : rawList) {
+            String matchId = item.getReciprocityMatchId();
+            if (item.getEventId() != null && item.getEventName() != null) {
+                ReciprocityPageItemResponse.ReciprocityRecordItem recordItem = new ReciprocityPageItemResponse.ReciprocityRecordItem();
+                recordItem.setEventId(item.getEventId());
+                recordItem.setEventName(item.getEventName());
+                recordItem.setEventOwnerType(item.getEventOwnerType());
+                recordItem.setAmount(item.getAmount());
+                recordItem.setRecordDate(item.getRecordDate());
+
+                if (!matchMap.containsKey(matchId)) {
+                    ReciprocityPageItemResponse aggregated = new ReciprocityPageItemResponse();
+                    aggregated.setReciprocityMatchId(matchId);
+                    aggregated.setContactId(item.getContactId());
+                    aggregated.setContactName(item.getContactName());
+                    aggregated.setEventTypeId(item.getEventTypeId());
+                    aggregated.setEventTypeName(item.getEventTypeName());
+                    aggregated.setReciprocityStatus(item.getReciprocityStatus());
+                    aggregated.setMatchType(item.getMatchType());
+                    aggregated.setRecords(new ArrayList<>());
+                    matchMap.put(matchId, aggregated);
+                }
+                matchMap.get(matchId).getRecords().add(recordItem);
+            }
+            if (matchMap.size() >= pageSize) {
+                break;
+            }
+        }
+        return new ArrayList<>(matchMap.values());
     }
 
     public ReciprocityDetailResponse detail(ReciprocityDetailRequest request) {

@@ -32,6 +32,8 @@ class AppTheme {
       onSurface: textPrimary,
       error: Color(0xFFB64A3B),
       onError: Colors.white,
+      errorContainer: Color(0xFFFCE8E6),
+      onErrorContainer: Color(0xFFB64A3B),
       outline: border,
     );
 

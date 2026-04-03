@@ -154,17 +154,29 @@ class MockLedgerRepository implements LedgerRepository {
   Future<List<ReciprocityEventSummary>> fetchReciprocityList(ReciprocityStatus status, {int pageNo = 1, int pageSize = 50}) async {
     return [
       ReciprocityEventSummary(
-        recordId: 'r1',
+        matchId: 'm1',
         contactId: 'c1',
         contactName: '张三',
-        eventId: 'e1',
-        eventName: '表弟结婚',
-        eventTypeCode: 'WEDDING',
+        eventTypeId: '1001',
         eventTypeName: '结婚',
-        kind: RecordKind.give,
-        amount: 800,
-        recordDate: DateTime(2026, 3, 18),
+        matchType: 'AUTO',
         status: status,
+        records: [
+          ReciprocityRecordItem(
+            eventId: 'e1',
+            eventName: '张三婚礼',
+            eventOwnerType: 'CONTACT',
+            amount: 200,
+            recordDate: DateTime(2024, 1, 15),
+          ),
+          ReciprocityRecordItem(
+            eventId: 'e2',
+            eventName: '我结婚',
+            eventOwnerType: 'SELF',
+            amount: 300,
+            recordDate: DateTime(2024, 2, 20),
+          ),
+        ],
       ),
     ];
   }
@@ -288,5 +300,33 @@ class MockLedgerRepository implements LedgerRepository {
   @override
   Future<String> saveRecordWithEvent(RecordSaveWithEventDraft draft) async {
     return 'mock-record-id';
+  }
+
+  @override
+  Future<String> saveRecordSimple(RecordSaveSimpleDraft draft) async {
+    return 'mock-record-id';
+  }
+
+  @override
+  Future<String> saveEventRelation(String selfEventId, String contactEventId) async {
+    return 'mock-relation-id';
+  }
+
+  @override
+  Future<void> deleteEventRelation(String id) async {}
+
+  @override
+  Future<List<EventRelationVO>> fetchEventRelationList(String selfEventId) async {
+    return [];
+  }
+
+  @override
+  Future<List<SuggestRelationVO>> fetchSuggestRelations(String selfEventId) async {
+    return [];
+  }
+
+  @override
+  Future<List<UnlinkedEventVO>> fetchUnlinkedEvents({String? eventTypeId, int pageNo = 1, int pageSize = 20}) async {
+    return [];
   }
 }

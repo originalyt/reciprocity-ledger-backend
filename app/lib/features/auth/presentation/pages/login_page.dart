@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/auth/auth_provider.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../../shared/providers/app_providers.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -52,8 +53,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         context.go('/home');
       }
     } catch (e) {
+      debugPrint('Login error: $e');
+      debugPrint('Error type: ${e.runtimeType}');
+      if (e is ApiException) {
+        debugPrint('ApiException code: ${e.code}, message: "${e.message}"');
+      }
       setState(() {
-        _errorMessage = e.toString().replaceAll('Exception: ', '');
+        if (e is ApiException) {
+          _errorMessage = e.message.isEmpty ? '登录失败，请稍后重试' : e.message;
+        } else {
+          _errorMessage = e.toString().replaceAll('Exception: ', '');
+        }
       });
     } finally {
       if (mounted) {
@@ -103,7 +113,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       ),
                     ),
                     const SizedBox(height: 40),
-                    if (_errorMessage != null) ...[
+                    if (_errorMessage != null && _errorMessage!.isNotEmpty) ...[
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -114,7 +124,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           children: [
                             Icon(
                               Icons.error_outline,
-                              color: theme.colorScheme.error,
+                              color: theme.colorScheme.onErrorContainer,
                               size: 20,
                             ),
                             const SizedBox(width: 8),
@@ -122,7 +132,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               child: Text(
                                 _errorMessage!,
                                 style: TextStyle(
-                                  color: theme.colorScheme.error,
+                                  color: theme.colorScheme.onErrorContainer,
                                   fontSize: 14,
                                 ),
                               ),

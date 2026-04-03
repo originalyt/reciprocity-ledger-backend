@@ -102,20 +102,23 @@ class ApiLedgerRepository implements LedgerRepository {
       return _asList(page['list']).map((item) {
         final map = _asMap(item);
         return ReciprocityEventSummary(
-          recordId: _stringValue(map['recordId']),
+          matchId: _stringValue(map['reciprocityMatchId']),
           contactId: _stringValue(map['contactId']),
           contactName: _stringValue(map['contactName']),
-          eventId: _stringValue(map['eventId']),
-          eventName: _stringValue(map['eventName']),
-          eventTypeCode: _stringValue(map['eventTypeCode']),
+          eventTypeId: _stringValue(map['eventTypeId']),
           eventTypeName: _stringValue(map['eventTypeName']),
-          kind: _recordKindFromDirection(_stringValue(map['direction'])),
-          amount: _doubleValue(map['amount']),
-          recordDate: _dateValue(map['recordDate']),
+          matchType: _stringValue(map['matchType']),
           status: parseReciprocityStatus(map['reciprocityStatus']?.toString()),
-          matchedRecordId: _nullableString(map['matchedRecordId']),
-          matchedAmount: _nullableDouble(map['matchedAmount']),
-          matchedRecordDate: _nullableDate(map['matchedRecordDate']),
+          records: _asList(map['records']).map((r) {
+            final recordMap = _asMap(r);
+            return ReciprocityRecordItem(
+              eventId: _stringValue(recordMap['eventId']),
+              eventName: _stringValue(recordMap['eventName']),
+              eventOwnerType: _stringValue(recordMap['eventOwnerType']),
+              amount: _doubleValue(recordMap['amount']),
+              recordDate: _dateValue(recordMap['recordDate']),
+            );
+          }).toList(),
         );
       }).toList();
     });
