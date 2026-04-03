@@ -55,13 +55,29 @@ public class ReciprocityService {
         String reciprocityStatus = normalizeNullable(request.getReciprocityStatus());
         String userId = UserContext.getUserId();
 
-        // 查询总数
-        long total = reciprocityMatchMapper.countPage(userId, contactId, eventTypeId, reciprocityStatus, request.getStartDate(), request.getEndDate());
+        long total;
+        List<ReciprocityPageItemResponse> rawList;
 
-        // 查询数据并在内存中聚合
-        List<ReciprocityPageItemResponse> rawList = reciprocityMatchMapper.selectPage(
-                userId, contactId, eventTypeId, reciprocityStatus,
-                request.getStartDate(), request.getEndDate(), pageSize * 2);
+        // 根据状态选择不同的查询方式
+        if ("UNMATCHED".equals(reciprocityStatus)) {
+            // 查询未闭环记录
+            total = reciprocityMatchMapper.countUnmatchedPage(userId, contactId, eventTypeId, request.getStartDate(), request.getEndDate());
+            rawList = reciprocityMatchMapper.selectUnmatchedPage(userId, contactId, eventTypeId, request.getStartDate(), request.getEndDate(), pageSize * 2);
+            // 未闭环记录不需要聚合，每条记录独立显示
+            return PageResponse.of(rawList, pageNo, pageSize, total);
+        } else if ("MATCHED".equals(reciprocityStatus)) {
+            // 查询自动匹配的闭环记录
+            total = reciprocityMatchMapper.countMatchedPage(userId, contactId, eventTypeId, MatchTypeEnum.AUTO.name(), request.getStartDate(), request.getEndDate());
+            rawList = reciprocityMatchMapper.selectMatchedPage(userId, contactId, eventTypeId, MatchTypeEnum.AUTO.name(), request.getStartDate(), request.getEndDate(), pageSize * 2);
+        } else if ("MANUAL_CONFIRMED".equals(reciprocityStatus)) {
+            // 查询人工确认的闭环记录
+            total = reciprocityMatchMapper.countMatchedPage(userId, contactId, eventTypeId, MatchTypeEnum.MANUAL.name(), request.getStartDate(), request.getEndDate());
+            rawList = reciprocityMatchMapper.selectMatchedPage(userId, contactId, eventTypeId, MatchTypeEnum.MANUAL.name(), request.getStartDate(), request.getEndDate(), pageSize * 2);
+        } else {
+            // 查询所有闭环记录（MATCHED + MANUAL_CONFIRMED），不包含 UNMATCHED
+            total = reciprocityMatchMapper.countMatchedPage(userId, contactId, eventTypeId, null, request.getStartDate(), request.getEndDate());
+            rawList = reciprocityMatchMapper.selectMatchedPage(userId, contactId, eventTypeId, null, request.getStartDate(), request.getEndDate(), pageSize * 2);
+        }
 
         // 按reciprocityMatchId聚合
         List<ReciprocityPageItemResponse> aggregatedList = aggregateReciprocityRecords(rawList, pageSize);

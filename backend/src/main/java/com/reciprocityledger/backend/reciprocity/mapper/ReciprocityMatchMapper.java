@@ -26,6 +26,51 @@ public interface ReciprocityMatchMapper {
     @Update("update rl_reciprocity_match set match_status = 'CANCELED', cancel_reason = #{cancelReason}, update_time = now() where id = #{matchId}")
     int cancel(@Param("matchId") String matchId, @Param("cancelReason") String cancelReason);
 
+    /**
+     * 查询未闭环记录（UNMATCHED）- 从 rl_gift_record 直接查询
+     */
+    @Select({
+            "<script>",
+            "select r.id as reciprocity_match_id, r.contact_id, c.contact_name, t.id as event_type_id, t.type_name as event_type_name,",
+            "e.id as event_id, e.event_name, e.event_owner_type, r.amount, r.record_date,",
+            "'UNMATCHED' as reciprocity_status, null as match_type",
+            "from rl_gift_record r",
+            "join rl_event e on e.id = r.event_id",
+            "join rl_contact c on c.id = r.contact_id",
+            "join rl_event_type t on t.id = e.event_type_id",
+            "<where>",
+            "  r.reciprocity_status = 'UNMATCHED'",
+            "  and not exists (select 1 from rl_reciprocity_match m where m.match_status = 'ACTIVE' and (m.source_record_id = r.id or m.target_record_id = r.id))",
+            "  <if test='userId != null and userId != \"\"'>",
+            "    and r.user_id = #{userId}",
+            "  </if>",
+            "  <if test='contactId != null and contactId != \"\"'>",
+            "    and r.contact_id = #{contactId}",
+            "  </if>",
+            "  <if test='eventTypeId != null and eventTypeId != \"\"'>",
+            "    and t.id = #{eventTypeId}",
+            "  </if>",
+            "  <if test='startDate != null'>",
+            "    and r.record_date &gt;= #{startDate}",
+            "  </if>",
+            "  <if test='endDate != null'>",
+            "    and r.record_date &lt;= #{endDate}",
+            "  </if>",
+            "</where>",
+            "order by r.id desc",
+            "limit #{pageSize}",
+            "</script>"
+    })
+    List<ReciprocityPageItemResponse> selectUnmatchedPage(@Param("userId") String userId,
+                                                           @Param("contactId") String contactId,
+                                                           @Param("eventTypeId") String eventTypeId,
+                                                           @Param("startDate") LocalDate startDate,
+                                                           @Param("endDate") LocalDate endDate,
+                                                           @Param("pageSize") int pageSize);
+
+    /**
+     * 查询已闭环记录（MATCHED/MANUAL_CONFIRMED）- 从 rl_reciprocity_match 查询
+     */
     @Select({
             "<script>",
             "select m.id as reciprocity_match_id, r.contact_id, c.contact_name, t.id as event_type_id, t.type_name as event_type_name,",
@@ -47,8 +92,8 @@ public interface ReciprocityMatchMapper {
             "  <if test='eventTypeId != null and eventTypeId != \"\"'>",
             "    and t.id = #{eventTypeId}",
             "  </if>",
-            "  <if test='reciprocityStatus != null and reciprocityStatus != \"\"'>",
-            "    and r.reciprocity_status = #{reciprocityStatus}",
+            "  <if test='matchType != null and matchType != \"\"'>",
+            "    and m.match_type = #{matchType}",
             "  </if>",
             "  <if test='startDate != null'>",
             "    and r.record_date &gt;= #{startDate}",
@@ -61,14 +106,53 @@ public interface ReciprocityMatchMapper {
             "limit #{pageSize}",
             "</script>"
     })
-    List<ReciprocityPageItemResponse> selectPage(@Param("userId") String userId,
-                                                 @Param("contactId") String contactId,
-                                                 @Param("eventTypeId") String eventTypeId,
-                                                 @Param("reciprocityStatus") String reciprocityStatus,
-                                                 @Param("startDate") LocalDate startDate,
-                                                 @Param("endDate") LocalDate endDate,
-                                                 @Param("pageSize") int pageSize);
+    List<ReciprocityPageItemResponse> selectMatchedPage(@Param("userId") String userId,
+                                                        @Param("contactId") String contactId,
+                                                        @Param("eventTypeId") String eventTypeId,
+                                                        @Param("matchType") String matchType,
+                                                        @Param("startDate") LocalDate startDate,
+                                                        @Param("endDate") LocalDate endDate,
+                                                        @Param("pageSize") int pageSize);
 
+    /**
+     * 统计未闭环记录数量
+     */
+    @Select({
+            "<script>",
+            "select count(*)",
+            "from rl_gift_record r",
+            "join rl_event e on e.id = r.event_id",
+            "join rl_event_type t on t.id = e.event_type_id",
+            "<where>",
+            "  r.reciprocity_status = 'UNMATCHED'",
+            "  and not exists (select 1 from rl_reciprocity_match m where m.match_status = 'ACTIVE' and (m.source_record_id = r.id or m.target_record_id = r.id))",
+            "  <if test='userId != null and userId != \"\"'>",
+            "    and r.user_id = #{userId}",
+            "  </if>",
+            "  <if test='contactId != null and contactId != \"\"'>",
+            "    and r.contact_id = #{contactId}",
+            "  </if>",
+            "  <if test='eventTypeId != null and eventTypeId != \"\"'>",
+            "    and t.id = #{eventTypeId}",
+            "  </if>",
+            "  <if test='startDate != null'>",
+            "    and r.record_date &gt;= #{startDate}",
+            "  </if>",
+            "  <if test='endDate != null'>",
+            "    and r.record_date &lt;= #{endDate}",
+            "  </if>",
+            "</where>",
+            "</script>"
+    })
+    long countUnmatchedPage(@Param("userId") String userId,
+                            @Param("contactId") String contactId,
+                            @Param("eventTypeId") String eventTypeId,
+                            @Param("startDate") LocalDate startDate,
+                            @Param("endDate") LocalDate endDate);
+
+    /**
+     * 统计已闭环记录数量
+     */
     @Select({
             "<script>",
             "select count(distinct m.id)",
@@ -87,8 +171,8 @@ public interface ReciprocityMatchMapper {
             "  <if test='eventTypeId != null and eventTypeId != \"\"'>",
             "    and t.id = #{eventTypeId}",
             "  </if>",
-            "  <if test='reciprocityStatus != null and reciprocityStatus != \"\"'>",
-            "    and r.reciprocity_status = #{reciprocityStatus}",
+            "  <if test='matchType != null and matchType != \"\"'>",
+            "    and m.match_type = #{matchType}",
             "  </if>",
             "  <if test='startDate != null'>",
             "    and r.record_date &gt;= #{startDate}",
@@ -99,10 +183,10 @@ public interface ReciprocityMatchMapper {
             "</where>",
             "</script>"
     })
-    long countPage(@Param("userId") String userId,
-                   @Param("contactId") String contactId,
-                   @Param("eventTypeId") String eventTypeId,
-                   @Param("reciprocityStatus") String reciprocityStatus,
-                   @Param("startDate") LocalDate startDate,
-                   @Param("endDate") LocalDate endDate);
+    long countMatchedPage(@Param("userId") String userId,
+                          @Param("contactId") String contactId,
+                          @Param("eventTypeId") String eventTypeId,
+                          @Param("matchType") String matchType,
+                          @Param("startDate") LocalDate startDate,
+                          @Param("endDate") LocalDate endDate);
 }
