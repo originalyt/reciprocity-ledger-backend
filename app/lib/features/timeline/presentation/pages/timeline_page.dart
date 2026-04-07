@@ -22,6 +22,7 @@ class _TimelinePageState extends ConsumerState<TimelinePage> {
   TimelineBundle? _timeline;
   Object? _error;
   bool _isLoading = true;
+  int _lastRefreshVersion = -1;
 
   @override
   void initState() {
@@ -41,6 +42,7 @@ class _TimelinePageState extends ConsumerState<TimelinePage> {
         setState(() {
           _timeline = timeline;
           _isLoading = false;
+          _lastRefreshVersion = ref.read(dataRefreshProvider);
         });
       }
     } catch (e) {
@@ -60,6 +62,17 @@ class _TimelinePageState extends ConsumerState<TimelinePage> {
 
   @override
   Widget build(BuildContext context) {
+    // 监听数据刷新通知
+    final refreshVersion = ref.watch(dataRefreshProvider);
+    if (refreshVersion != _lastRefreshVersion) {
+      _lastRefreshVersion = refreshVersion;
+      Future.microtask(() {
+        if (mounted && !_isLoading) {
+          _loadData();
+        }
+      });
+    }
+
     final filter = ref.watch(timelineFilterProvider);
     final theme = Theme.of(context);
 

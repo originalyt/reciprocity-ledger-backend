@@ -11,12 +11,16 @@ import java.util.List;
 public class ReciprocityPageItemResponse {
 
     private String reciprocityMatchId;
+    private String recordId;
     private String contactId;
     private String contactName;
     private String eventTypeId;
     private String eventTypeName;
     private String reciprocityStatus;
     private String matchType;
+    private String noNeedReason;
+    private String direction;
+    private String remark;
     private List<ReciprocityRecordItem> records;
 
     @JsonIgnore
@@ -37,5 +41,7 @@ public class ReciprocityPageItemResponse {
         private String eventOwnerType;
         private BigDecimal amount;
         private LocalDate recordDate;
+        private String direction;
+        private String remark;
     }
 }

@@ -329,4 +329,9 @@ class MockLedgerRepository implements LedgerRepository {
   Future<List<UnlinkedEventVO>> fetchUnlinkedEvents({String? eventTypeId, int pageNo = 1, int pageSize = 20}) async {
     return [];
   }
+
+  @override
+  Future<String> markReciprocityNoNeed(String recordId, {String? reason}) async {
+    return recordId;
+  }
 }

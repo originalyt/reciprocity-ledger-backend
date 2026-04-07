@@ -22,19 +22,11 @@ class _HomePageState extends ConsumerState<HomePage> {
   HomeOverview? _overview;
   Object? _error;
   bool _isLoading = true;
+  int _lastRefreshVersion = -1;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // 监听数据刷新通知，当其他页面触发刷新时重新加载数据
-    // 使用 ref.read 读取 refreshCount，当 invalidate 后值会变化
-    ref.watch(dataRefreshProvider);
     _loadData();
   }
 
@@ -49,6 +41,8 @@ class _HomePageState extends ConsumerState<HomePage> {
         setState(() {
           _overview = overview;
           _isLoading = false;
+          // 加载完成后同步版本号，避免后续 build 重复触发
+          _lastRefreshVersion = ref.read(dataRefreshProvider);
         });
       }
     } catch (e) {
@@ -63,6 +57,18 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    // 监听数据刷新通知，当其他页面触发刷新时重新加载数据
+    final refreshVersion = ref.watch(dataRefreshProvider);
+    if (refreshVersion != _lastRefreshVersion) {
+      _lastRefreshVersion = refreshVersion;
+      // 使用 microtask 避免在 build 中直接调用 setState
+      Future.microtask(() {
+        if (mounted && !_isLoading) {
+          _loadData();
+        }
+      });
+    }
+
     final theme = Theme.of(context);
 
     if (_isLoading) {
@@ -127,7 +133,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
                 const SizedBox(height: 16),
                 LedgerSectionCard(
-                  title: '待处理闭环',
+                  title: '待往来',
                   subtitle: '当前后端首页只返回待处理总数。',
                   child: InkWell(
                     borderRadius: BorderRadius.circular(18),
@@ -186,8 +192,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                       _QuickActionTile(
                         icon: Icons.assignment_outlined,
-                        title: '闭环记录',
-                        subtitle: '查看闭环状态列表',
+                        title: '往来记录',
+                        subtitle: '查看往来状态列表',
                         onTap: () => context.go('/reciprocity'),
                       ),
                       _QuickActionTile(

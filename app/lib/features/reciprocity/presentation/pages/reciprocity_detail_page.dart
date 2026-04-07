@@ -23,6 +23,7 @@ class _ReciprocityDetailPageState extends ConsumerState<ReciprocityDetailPage> {
   ReciprocityDetail? _detail;
   Object? _error;
   bool _isLoading = true;
+  int _lastRefreshVersion = -1;
 
   @override
   void initState() {
@@ -41,6 +42,7 @@ class _ReciprocityDetailPageState extends ConsumerState<ReciprocityDetailPage> {
         setState(() {
           _detail = detail;
           _isLoading = false;
+          _lastRefreshVersion = ref.read(dataRefreshProvider);
         });
       }
     } catch (e) {
@@ -53,21 +55,89 @@ class _ReciprocityDetailPageState extends ConsumerState<ReciprocityDetailPage> {
     }
   }
 
+  /// 显示标记为无需往来的确认对话框
+  Future<void> _showMarkNoNeedDialog() async {
+    final reasonController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('标记为无需往来'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('确认后将此记录标记为无需往来，后续不再提醒。'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reasonController,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                labelText: '原因（可选）',
+                hintText: '如：对方已去世、关系已断等',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确认'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        await markReciprocityNoNeed(ref, _detail!.record.recordId, reason: reasonController.text.trim());
+        if (mounted) {
+          triggerDataRefresh(ref);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('已标记为无需往来')),
+          );
+          context.pop();
+        }
+      } on ApiException catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.message)),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // 监听数据刷新通知
+    final refreshVersion = ref.watch(dataRefreshProvider);
+    if (refreshVersion != _lastRefreshVersion) {
+      _lastRefreshVersion = refreshVersion;
+      Future.microtask(() {
+        if (mounted && !_isLoading) {
+          _loadData();
+        }
+      });
+    }
+
     final theme = Theme.of(context);
 
     if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('闭环详情')),
+        appBar: AppBar(title: const Text('往来详情')),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (_error != null) {
-      final message = _error is ApiException ? (_error as ApiException).message : '闭环详情加载失败';
+      final message = _error is ApiException ? (_error as ApiException).message : '往来详情加载失败';
       return Scaffold(
-        appBar: AppBar(title: const Text('闭环详情')),
+        appBar: AppBar(title: const Text('往来详情')),
         body: LedgerEmptyStateView(
           title: '加载失败',
           message: message,
@@ -80,7 +150,7 @@ class _ReciprocityDetailPageState extends ConsumerState<ReciprocityDetailPage> {
     final detail = _detail!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('闭环详情')),
+      appBar: AppBar(title: const Text('往来详情')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
@@ -110,7 +180,7 @@ class _ReciprocityDetailPageState extends ConsumerState<ReciprocityDetailPage> {
                 const SizedBox(height: 8),
                 Text('同类型总随礼：${LedgerFormatters.amount(detail.historyReference.sameTypeSendAmount)}', style: theme.textTheme.bodyLarge),
                 const SizedBox(height: 8),
-                Text('未闭环记录：${detail.historyReference.unclosedRecordCount} 条', style: theme.textTheme.bodyLarge),
+                Text('待往来记录：${detail.historyReference.unclosedRecordCount} 条', style: theme.textTheme.bodyLarge),
                 if (detail.historyReference.lastSameTypeRecord != null) ...[
                   const SizedBox(height: 12),
                   Text('最近同类型记录：${detail.historyReference.lastSameTypeRecord!.eventName}', style: theme.textTheme.bodyMedium),
@@ -121,7 +191,7 @@ class _ReciprocityDetailPageState extends ConsumerState<ReciprocityDetailPage> {
           if (detail.manualInfo != null) ...[
             const SizedBox(height: 16),
             LedgerSectionCard(
-              title: '人工闭环信息',
+              title: '手动往来信息',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -137,23 +207,39 @@ class _ReciprocityDetailPageState extends ConsumerState<ReciprocityDetailPage> {
             ),
           ],
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => context.push('/record/editor?kind=receive&contactId=${detail.record.contactId}'),
-                  child: const Text('新增收礼'),
-                ),
+          // 根据记录类型显示对应的操作按钮
+          // 如果是随礼（我给别人），等待对方回礼，显示"新增收礼"
+          // 如果是收礼（别人给我），我需要回礼，显示"新增随礼"
+          if (detail.record.kind == RecordKind.give)
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => context.push('/record/editor?kind=receive&contactId=${detail.record.contactId}'),
+                icon: const Icon(Icons.arrow_downward_rounded),
+                label: const Text('新增收礼（对方回礼）'),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => context.push('/record/editor?kind=give&contactId=${detail.record.contactId}'),
-                  child: const Text('新增随礼'),
-                ),
+            )
+          else
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => context.push('/record/editor?kind=give&contactId=${detail.record.contactId}'),
+                icon: const Icon(Icons.arrow_upward_rounded),
+                label: const Text('新增随礼（我回礼）'),
               ),
-            ],
-          ),
+            ),
+          // 只有待往来状态才显示"无需往来"按钮
+          if (detail.record.reciprocityStatus == ReciprocityStatus.unmatched) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton.icon(
+                onPressed: _showMarkNoNeedDialog,
+                icon: const Icon(Icons.check_circle_outline),
+                label: const Text('标记为无需往来'),
+              ),
+            ),
+          ],
         ],
       ),
     );

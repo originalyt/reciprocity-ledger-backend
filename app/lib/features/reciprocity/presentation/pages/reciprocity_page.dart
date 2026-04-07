@@ -21,6 +21,7 @@ class _ReciprocityPageState extends ConsumerState<ReciprocityPage> {
   List<ReciprocityEventSummary>? _items;
   Object? _error;
   bool _isLoading = true;
+  int _lastRefreshVersion = -1;
 
   @override
   void initState() {
@@ -40,6 +41,7 @@ class _ReciprocityPageState extends ConsumerState<ReciprocityPage> {
         setState(() {
           _items = items;
           _isLoading = false;
+          _lastRefreshVersion = ref.read(dataRefreshProvider);
         });
       }
     } catch (e) {
@@ -59,6 +61,17 @@ class _ReciprocityPageState extends ConsumerState<ReciprocityPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 监听数据刷新通知
+    final refreshVersion = ref.watch(dataRefreshProvider);
+    if (refreshVersion != _lastRefreshVersion) {
+      _lastRefreshVersion = refreshVersion;
+      Future.microtask(() {
+        if (mounted && !_isLoading) {
+          _loadData();
+        }
+      });
+    }
+
     final selected = ref.watch(reciprocityFilterProvider);
     final theme = Theme.of(context);
 
@@ -69,7 +82,7 @@ class _ReciprocityPageState extends ConsumerState<ReciprocityPage> {
     }
 
     if (_error != null) {
-      final message = _error is ApiException ? (_error as ApiException).message : '闭环列表加载失败';
+      final message = _error is ApiException ? (_error as ApiException).message : '往来清单加载失败';
       return SafeArea(
         child: LedgerEmptyStateView(
           title: '加载失败',
@@ -86,9 +99,9 @@ class _ReciprocityPageState extends ConsumerState<ReciprocityPage> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
         children: [
-          Text('闭环列表', style: theme.textTheme.headlineMedium),
+          Text('往来清单', style: theme.textTheme.headlineMedium),
           const SizedBox(height: 8),
-          Text('当前页面按后端真实闭环状态展示记录。', style: theme.textTheme.bodyMedium),
+          Text('当前页面按往来状态展示记录。', style: theme.textTheme.bodyMedium),
           const SizedBox(height: 20),
           SegmentedButton<ReciprocityStatus>(
             multiSelectionEnabled: false,
@@ -117,8 +130,12 @@ class _ReciprocityPageState extends ConsumerState<ReciprocityPage> {
                     children: items.map((item) {
                       final selfRecord = item.selfRecord;
                       final contactRecord = item.contactRecord;
+                      final isNoNeed = item.status == ReciprocityStatus.manualConfirmed &&
+                          item.noNeedReason != null;
+                      final recordId = item.recordId ?? item.matchId;
+
                       return InkWell(
-                        onTap: () => context.push('/reciprocity/${item.matchId}'),
+                        onTap: () => context.push('/reciprocity/$recordId'),
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
@@ -144,8 +161,33 @@ class _ReciprocityPageState extends ConsumerState<ReciprocityPage> {
                                 child: Text('联系人：${item.contactName}', style: theme.textTheme.bodyMedium),
                               ),
                               const SizedBox(height: 8),
+                              // 无需往来记录（单条记录）
+                              if (isNoNeed && item.records.isNotEmpty) ...[
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 16),
+                                  child: Row(
+                                    children: [
+                                      const Text('└─ ', style: TextStyle(fontFamily: 'monospace')),
+                                      Expanded(
+                                        child: Text(
+                                          '${item.records.first.eventName}：${item.records.first.direction == 'SEND' ? '我随礼' : '我收礼'} ${LedgerFormatters.amount(item.records.first.amount)} (${LedgerFormatters.monthDay(item.records.first.recordDate)})',
+                                          style: theme.textTheme.bodyMedium,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (item.noNeedReason != null && item.noNeedReason!.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 16, top: 4),
+                                    child: Text(
+                                      '原因：${item.noNeedReason}',
+                                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                                    ),
+                                  ),
+                              ]
                               // 联系人事件（我随礼）
-                              if (contactRecord != null)
+                              else if (contactRecord != null)
                                 Padding(
                                   padding: const EdgeInsets.only(left: 16),
                                   child: Row(
@@ -161,7 +203,7 @@ class _ReciprocityPageState extends ConsumerState<ReciprocityPage> {
                                   ),
                                 ),
                               // 我方事件（对方回礼）
-                              if (selfRecord != null)
+                              if (!isNoNeed && selfRecord != null)
                                 Padding(
                                   padding: const EdgeInsets.only(left: 16),
                                   child: Row(

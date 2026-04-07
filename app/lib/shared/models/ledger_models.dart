@@ -66,11 +66,11 @@ extension ReciprocityStatusX on ReciprocityStatus {
   String get label {
     switch (this) {
       case ReciprocityStatus.unmatched:
-        return '未闭环';
+        return '待往来';
       case ReciprocityStatus.matched:
-        return '已闭环';
+        return '已往来';
       case ReciprocityStatus.manualConfirmed:
-        return '人工确认';
+        return '手动确认';
       case ReciprocityStatus.manualCanceled:
         return '已取消';
     }
@@ -98,6 +98,8 @@ ReciprocityStatus parseReciprocityStatus(String? value) {
       return ReciprocityStatus.manualConfirmed;
     case 'MANUAL_CANCELED':
       return ReciprocityStatus.manualCanceled;
+    case 'NO_NEED':
+      return ReciprocityStatus.manualConfirmed; // 无需往来归类到手动确认
     case 'UNMATCHED':
     default:
       return ReciprocityStatus.unmatched;
@@ -284,6 +286,8 @@ class ReciprocityRecordItem {
     required this.eventOwnerType,
     required this.amount,
     required this.recordDate,
+    this.direction,
+    this.remark,
   });
 
   final String eventId;
@@ -291,6 +295,8 @@ class ReciprocityRecordItem {
   final String eventOwnerType;
   final double amount;
   final DateTime recordDate;
+  final String? direction;
+  final String? remark;
 }
 
 class ReciprocityEventSummary {
@@ -303,15 +309,23 @@ class ReciprocityEventSummary {
     required this.matchType,
     required this.status,
     required this.records,
+    this.recordId,
+    this.noNeedReason,
+    this.direction,
+    this.remark,
   });
 
   final String matchId;
+  final String? recordId;
   final String contactId;
   final String contactName;
   final String eventTypeId;
   final String eventTypeName;
   final String matchType;
   final ReciprocityStatus status;
+  final String? noNeedReason;
+  final String? direction;
+  final String? remark;
   final List<ReciprocityRecordItem> records;
 
   /// 获取SELF事件（我办的事件，对方随礼）

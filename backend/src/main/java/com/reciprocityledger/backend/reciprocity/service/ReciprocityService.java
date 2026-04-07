@@ -20,6 +20,7 @@ import com.reciprocityledger.backend.reciprocity.dto.request.ReciprocityDetailRe
 import com.reciprocityledger.backend.reciprocity.dto.request.ReciprocityHistoryReferenceRequest;
 import com.reciprocityledger.backend.reciprocity.dto.request.ReciprocityManualCancelRequest;
 import com.reciprocityledger.backend.reciprocity.dto.request.ReciprocityManualConfirmRequest;
+import com.reciprocityledger.backend.reciprocity.dto.request.ReciprocityMarkNoNeedRequest;
 import com.reciprocityledger.backend.reciprocity.dto.request.ReciprocityPageRequest;
 import com.reciprocityledger.backend.reciprocity.dto.response.ReciprocityDetailResponse;
 import com.reciprocityledger.backend.reciprocity.dto.response.ReciprocityHistoryReferenceResponse;
@@ -70,9 +71,50 @@ public class ReciprocityService {
             total = reciprocityMatchMapper.countMatchedPage(userId, contactId, eventTypeId, MatchTypeEnum.AUTO.name(), request.getStartDate(), request.getEndDate());
             rawList = reciprocityMatchMapper.selectMatchedPage(userId, contactId, eventTypeId, MatchTypeEnum.AUTO.name(), request.getStartDate(), request.getEndDate(), pageSize * 2);
         } else if ("MANUAL_CONFIRMED".equals(reciprocityStatus)) {
-            // 查询人工确认的闭环记录
-            total = reciprocityMatchMapper.countMatchedPage(userId, contactId, eventTypeId, MatchTypeEnum.MANUAL.name(), request.getStartDate(), request.getEndDate());
-            rawList = reciprocityMatchMapper.selectMatchedPage(userId, contactId, eventTypeId, MatchTypeEnum.MANUAL.name(), request.getStartDate(), request.getEndDate(), pageSize * 2);
+            // 查询手动确认的记录：包含手动闭环确认 + 手动标记无需往来
+            long manualMatchedTotal = reciprocityMatchMapper.countMatchedPage(userId, contactId, eventTypeId, MatchTypeEnum.MANUAL.name(), request.getStartDate(), request.getEndDate());
+            long noNeedTotal = reciprocityMatchMapper.countNoNeedPage(userId, contactId, eventTypeId, request.getStartDate(), request.getEndDate());
+            total = manualMatchedTotal + noNeedTotal;
+
+            List<ReciprocityPageItemResponse> manualMatchedList = reciprocityMatchMapper.selectMatchedPage(userId, contactId, eventTypeId, MatchTypeEnum.MANUAL.name(), request.getStartDate(), request.getEndDate(), pageSize * 2);
+            List<ReciprocityPageItemResponse> noNeedList = reciprocityMatchMapper.selectNoNeedPage(userId, contactId, eventTypeId, request.getStartDate(), request.getEndDate(), pageSize * 2);
+
+            // 合并两个列表
+            rawList = new ArrayList<>();
+            rawList.addAll(manualMatchedList);
+            rawList.addAll(noNeedList);
+
+            // 按记录ID降序排序
+            rawList.sort((a, b) -> {
+                if (a.getReciprocityMatchId() == null || b.getReciprocityMatchId() == null) {
+                    return 0;
+                }
+                return b.getReciprocityMatchId().compareTo(a.getReciprocityMatchId());
+            });
+
+            // 手动确认的记录包含两种类型：闭环对和单条记录，需要分开处理
+            // NO_NEED 是单条记录直接返回，MANUAL_CONFIRMED 是闭环对需要聚合
+            List<ReciprocityPageItemResponse> noNeedRecords = rawList.stream()
+                .filter(item -> "NO_NEED".equals(item.getReciprocityStatus()))
+                .limit(pageSize)
+                .collect(java.util.stream.Collectors.toList());
+            List<ReciprocityPageItemResponse> manualMatchedRecords = rawList.stream()
+                .filter(item -> !"NO_NEED".equals(item.getReciprocityStatus()))
+                .collect(java.util.stream.Collectors.toList());
+
+            // 聚合手动闭环记录
+            List<ReciprocityPageItemResponse> aggregatedManualMatched = aggregateReciprocityRecords(manualMatchedRecords, pageSize - noNeedRecords.size());
+
+            // 合并最终结果
+            List<ReciprocityPageItemResponse> finalList = new ArrayList<>();
+            finalList.addAll(aggregatedManualMatched);
+            finalList.addAll(noNeedRecords);
+
+            return PageResponse.of(finalList, pageNo, pageSize, total);
+        } else if ("MANUAL_CANCELED".equals(reciprocityStatus)) {
+            // 查询已取消的闭环记录
+            total = reciprocityMatchMapper.countCanceledPage(userId, contactId, eventTypeId, request.getStartDate(), request.getEndDate());
+            rawList = reciprocityMatchMapper.selectCanceledPage(userId, contactId, eventTypeId, request.getStartDate(), request.getEndDate(), pageSize * 2);
         } else {
             // 查询所有闭环记录（MATCHED + MANUAL_CONFIRMED），不包含 UNMATCHED
             total = reciprocityMatchMapper.countMatchedPage(userId, contactId, eventTypeId, null, request.getStartDate(), request.getEndDate());
@@ -201,6 +243,27 @@ public class ReciprocityService {
         recordMapper.updateReciprocityStatus(match.getSourceRecordId(), ReciprocityStatusEnum.MANUAL_CANCELED.name());
         recordMapper.updateReciprocityStatus(match.getTargetRecordId(), ReciprocityStatusEnum.MANUAL_CANCELED.name());
         return new IdResponse(match.getId());
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public IdResponse markNoNeed(ReciprocityMarkNoNeedRequest request) {
+        GiftRecord record = requireRecord(request.getRecordId());
+        String userId = UserContext.getUserId();
+        if (!userId.equals(record.getUserId())) {
+            throw new BusinessException(ErrorCode.RECORD_NOT_FOUND, "记录不存在");
+        }
+        // 验证记录必须是待往来状态
+        if (!ReciprocityStatusEnum.UNMATCHED.name().equals(record.getReciprocityStatus())) {
+            throw new BusinessException(ErrorCode.INVALID_RECIPROCITY_OPERATION, "只有待往来记录可以标记为无需往来");
+        }
+        // 验证记录没有有效的闭环关系
+        ReciprocityMatch activeMatch = reciprocityMatchMapper.selectActiveByRecordId(record.getId());
+        if (activeMatch != null) {
+            throw new BusinessException(ErrorCode.INVALID_RECIPROCITY_OPERATION, "该记录已存在有效闭环关系，不能标记为无需往来");
+        }
+        String reason = normalizeNullable(request.getReason());
+        recordMapper.updateReciprocityStatusWithReason(record.getId(), ReciprocityStatusEnum.NO_NEED.name(), reason);
+        return new IdResponse(record.getId());
     }
 
     @Transactional(rollbackFor = Exception.class)

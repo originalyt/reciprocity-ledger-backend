@@ -25,4 +25,7 @@ abstract class LedgerRepository {
   Future<List<EventRelationVO>> fetchEventRelationList(String selfEventId);
   Future<List<SuggestRelationVO>> fetchSuggestRelations(String selfEventId);
   Future<List<UnlinkedEventVO>> fetchUnlinkedEvents({String? eventTypeId, int pageNo = 1, int pageSize = 20});
+
+  /// 标记往来记录为无需往来
+  Future<String> markReciprocityNoNeed(String recordId, {String? reason});
 }

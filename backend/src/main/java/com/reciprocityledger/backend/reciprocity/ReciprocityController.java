@@ -7,6 +7,7 @@ import com.reciprocityledger.backend.reciprocity.dto.request.ReciprocityDetailRe
 import com.reciprocityledger.backend.reciprocity.dto.request.ReciprocityHistoryReferenceRequest;
 import com.reciprocityledger.backend.reciprocity.dto.request.ReciprocityManualCancelRequest;
 import com.reciprocityledger.backend.reciprocity.dto.request.ReciprocityManualConfirmRequest;
+import com.reciprocityledger.backend.reciprocity.dto.request.ReciprocityMarkNoNeedRequest;
 import com.reciprocityledger.backend.reciprocity.dto.request.ReciprocityPageRequest;
 import com.reciprocityledger.backend.reciprocity.dto.response.ReciprocityDetailResponse;
 import com.reciprocityledger.backend.reciprocity.dto.response.ReciprocityHistoryReferenceResponse;
@@ -47,5 +48,10 @@ public class ReciprocityController {
     @PostMapping("/app/reciprocity/history-reference")
     public ApiResponse<ReciprocityHistoryReferenceResponse> historyReference(@Valid @RequestBody ReciprocityHistoryReferenceRequest request) {
         return ApiResponse.success(reciprocityService.historyReference(request));
+    }
+
+    @PostMapping("/app/reciprocity/mark-no-need")
+    public ApiResponse<IdResponse> markNoNeed(@Valid @RequestBody ReciprocityMarkNoNeedRequest request) {
+        return ApiResponse.success(reciprocityService.markNoNeed(request));
     }
 }

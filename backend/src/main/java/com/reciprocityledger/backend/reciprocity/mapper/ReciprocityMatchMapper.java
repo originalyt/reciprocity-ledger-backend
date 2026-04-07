@@ -189,4 +189,158 @@ public interface ReciprocityMatchMapper {
                           @Param("matchType") String matchType,
                           @Param("startDate") LocalDate startDate,
                           @Param("endDate") LocalDate endDate);
+
+    /**
+     * 查询已取消的闭环记录（MANUAL_CANCELED）- 从 rl_reciprocity_match 查询
+     */
+    @Select({
+            "<script>",
+            "select m.id as reciprocity_match_id, r.contact_id, c.contact_name, t.id as event_type_id, t.type_name as event_type_name,",
+            "e.id as event_id, e.event_name, e.event_owner_type, r.amount, r.record_date,",
+            "m.match_type, r.reciprocity_status",
+            "from rl_reciprocity_match m",
+            "join rl_gift_record r on (r.id = m.source_record_id or r.id = m.target_record_id)",
+            "join rl_event e on e.id = r.event_id",
+            "join rl_contact c on c.id = r.contact_id",
+            "join rl_event_type t on t.id = e.event_type_id",
+            "<where>",
+            "  m.match_status = 'CANCELED'",
+            "  <if test='userId != null and userId != \"\"'>",
+            "    and m.user_id = #{userId}",
+            "  </if>",
+            "  <if test='contactId != null and contactId != \"\"'>",
+            "    and r.contact_id = #{contactId}",
+            "  </if>",
+            "  <if test='eventTypeId != null and eventTypeId != \"\"'>",
+            "    and t.id = #{eventTypeId}",
+            "  </if>",
+            "  <if test='startDate != null'>",
+            "    and r.record_date &gt;= #{startDate}",
+            "  </if>",
+            "  <if test='endDate != null'>",
+            "    and r.record_date &lt;= #{endDate}",
+            "  </if>",
+            "</where>",
+            "order by m.id desc, e.event_owner_type desc",
+            "limit #{pageSize}",
+            "</script>"
+    })
+    List<ReciprocityPageItemResponse> selectCanceledPage(@Param("userId") String userId,
+                                                         @Param("contactId") String contactId,
+                                                         @Param("eventTypeId") String eventTypeId,
+                                                         @Param("startDate") LocalDate startDate,
+                                                         @Param("endDate") LocalDate endDate,
+                                                         @Param("pageSize") int pageSize);
+
+    /**
+     * 统计已取消的闭环记录数量
+     */
+    @Select({
+            "<script>",
+            "select count(distinct m.id)",
+            "from rl_reciprocity_match m",
+            "join rl_gift_record r on (r.id = m.source_record_id or r.id = m.target_record_id)",
+            "join rl_event e on e.id = r.event_id",
+            "join rl_event_type t on t.id = e.event_type_id",
+            "<where>",
+            "  m.match_status = 'CANCELED'",
+            "  <if test='userId != null and userId != \"\"'>",
+            "    and m.user_id = #{userId}",
+            "  </if>",
+            "  <if test='contactId != null and contactId != \"\"'>",
+            "    and r.contact_id = #{contactId}",
+            "  </if>",
+            "  <if test='eventTypeId != null and eventTypeId != \"\"'>",
+            "    and t.id = #{eventTypeId}",
+            "  </if>",
+            "  <if test='startDate != null'>",
+            "    and r.record_date &gt;= #{startDate}",
+            "  </if>",
+            "  <if test='endDate != null'>",
+            "    and r.record_date &lt;= #{endDate}",
+            "  </if>",
+            "</where>",
+            "</script>"
+    })
+    long countCanceledPage(@Param("userId") String userId,
+                           @Param("contactId") String contactId,
+                           @Param("eventTypeId") String eventTypeId,
+                           @Param("startDate") LocalDate startDate,
+                           @Param("endDate") LocalDate endDate);
+
+    /**
+     * 查询无需往来的记录（NO_NEED）- 从 rl_gift_record 直接查询
+     */
+    @Select({
+            "<script>",
+            "select r.id as reciprocity_match_id, r.id as record_id, r.contact_id, c.contact_name, t.id as event_type_id, t.type_name as event_type_name,",
+            "e.id as event_id, e.event_name, e.event_owner_type, r.amount, r.record_date, r.direction, r.remark,",
+            "'NO_NEED' as reciprocity_status, null as match_type, r.no_need_reason",
+            "from rl_gift_record r",
+            "join rl_event e on e.id = r.event_id",
+            "join rl_contact c on c.id = r.contact_id",
+            "join rl_event_type t on t.id = e.event_type_id",
+            "<where>",
+            "  r.reciprocity_status = 'NO_NEED'",
+            "  <if test='userId != null and userId != \"\"'>",
+            "    and r.user_id = #{userId}",
+            "  </if>",
+            "  <if test='contactId != null and contactId != \"\"'>",
+            "    and r.contact_id = #{contactId}",
+            "  </if>",
+            "  <if test='eventTypeId != null and eventTypeId != \"\"'>",
+            "    and t.id = #{eventTypeId}",
+            "  </if>",
+            "  <if test='startDate != null'>",
+            "    and r.record_date &gt;= #{startDate}",
+            "  </if>",
+            "  <if test='endDate != null'>",
+            "    and r.record_date &lt;= #{endDate}",
+            "  </if>",
+            "</where>",
+            "order by r.id desc",
+            "limit #{pageSize}",
+            "</script>"
+    })
+    List<ReciprocityPageItemResponse> selectNoNeedPage(@Param("userId") String userId,
+                                                        @Param("contactId") String contactId,
+                                                        @Param("eventTypeId") String eventTypeId,
+                                                        @Param("startDate") LocalDate startDate,
+                                                        @Param("endDate") LocalDate endDate,
+                                                        @Param("pageSize") int pageSize);
+
+    /**
+     * 统计无需往来的记录数量
+     */
+    @Select({
+            "<script>",
+            "select count(*)",
+            "from rl_gift_record r",
+            "join rl_event e on e.id = r.event_id",
+            "join rl_event_type t on t.id = e.event_type_id",
+            "<where>",
+            "  r.reciprocity_status = 'NO_NEED'",
+            "  <if test='userId != null and userId != \"\"'>",
+            "    and r.user_id = #{userId}",
+            "  </if>",
+            "  <if test='contactId != null and contactId != \"\"'>",
+            "    and r.contact_id = #{contactId}",
+            "  </if>",
+            "  <if test='eventTypeId != null and eventTypeId != \"\"'>",
+            "    and t.id = #{eventTypeId}",
+            "  </if>",
+            "  <if test='startDate != null'>",
+            "    and r.record_date &gt;= #{startDate}",
+            "  </if>",
+            "  <if test='endDate != null'>",
+            "    and r.record_date &lt;= #{endDate}",
+            "  </if>",
+            "</where>",
+            "</script>"
+    })
+    long countNoNeedPage(@Param("userId") String userId,
+                         @Param("contactId") String contactId,
+                         @Param("eventTypeId") String eventTypeId,
+                         @Param("startDate") LocalDate startDate,
+                         @Param("endDate") LocalDate endDate);
 }

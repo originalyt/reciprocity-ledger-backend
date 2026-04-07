@@ -127,6 +127,9 @@ public interface RecordMapper {
     @Update("update rl_gift_record set reciprocity_status = #{status}, update_time = now() where id = #{recordId}")
     int updateReciprocityStatus(@Param("recordId") String recordId, @Param("status") String status);
 
+    @Update("update rl_gift_record set reciprocity_status = #{status}, no_need_reason = #{reason}, update_time = now() where id = #{recordId}")
+    int updateReciprocityStatusWithReason(@Param("recordId") String recordId, @Param("status") String status, @Param("reason") String reason);
+
     @Select("select coalesce(sum(amount), 0) from rl_gift_record where contact_id = #{contactId} and direction = #{direction}")
     BigDecimal sumAmountByContactAndDirection(@Param("contactId") String contactId, @Param("direction") String direction);
 

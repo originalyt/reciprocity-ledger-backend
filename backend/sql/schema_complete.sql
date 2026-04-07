@@ -264,3 +264,12 @@ VALUES
     ('1009', 'FESTIVAL', '节日往来', 90, TRUE, TRUE, '系统预置事件类型'),
     ('1010', 'OTHER', '其他', 100, TRUE, TRUE, '系统预置事件类型')
 ON CONFLICT (type_code) DO NOTHING;
+
+
+ALTER TABLE rl_gift_record ADD COLUMN no_need_reason VARCHAR(500);
+COMMENT ON COLUMN rl_gift_record.no_need_reason IS '无需往来原因';
+
+-- 更新约束，添加 NO_NEED 状态
+ALTER TABLE rl_gift_record DROP CONSTRAINT ck_rl_gift_record_reciprocity_status;
+ALTER TABLE rl_gift_record ADD CONSTRAINT ck_rl_gift_record_reciprocity_status
+    CHECK (reciprocity_status IN ('UNMATCHED', 'MATCHED', 'MANUAL_CANCELED', 'MANUAL_CONFIRMED', 'NO_NEED'));

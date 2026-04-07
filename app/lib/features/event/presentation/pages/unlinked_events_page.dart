@@ -25,6 +25,7 @@ class _UnlinkedEventsPageState extends ConsumerState<UnlinkedEventsPage> {
   Object? _error;
   int _pageNo = 1;
   bool _hasMore = true;
+  int _lastRefreshVersion = -1;
 
   @override
   void initState() {
@@ -50,6 +51,7 @@ class _UnlinkedEventsPageState extends ConsumerState<UnlinkedEventsPage> {
           _eventTypes = results[1] as List<EventTypeOption>;
           _isLoading = false;
           _hasMore = _events.length >= 20;
+          _lastRefreshVersion = ref.read(dataRefreshProvider);
         });
       }
     } catch (e) {
@@ -97,6 +99,17 @@ class _UnlinkedEventsPageState extends ConsumerState<UnlinkedEventsPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 监听数据刷新通知
+    final refreshVersion = ref.watch(dataRefreshProvider);
+    if (refreshVersion != _lastRefreshVersion) {
+      _lastRefreshVersion = refreshVersion;
+      Future.microtask(() {
+        if (mounted && !_isLoading) {
+          _loadData();
+        }
+      });
+    }
+
     final theme = Theme.of(context);
 
     if (_isLoading) {

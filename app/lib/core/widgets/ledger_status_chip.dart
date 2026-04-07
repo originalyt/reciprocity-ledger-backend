@@ -46,11 +46,11 @@ class LedgerStatusChip extends StatelessWidget {
 
     switch (status!) {
       case ReciprocityStatus.unmatched:
-        return _ChipStyle('未闭环', statusTheme.waitMeSoft, statusTheme.waitMe);
+        return _ChipStyle('待往来', statusTheme.waitMeSoft, statusTheme.waitMe);
       case ReciprocityStatus.matched:
-        return _ChipStyle('已闭环', statusTheme.mutualSoft, statusTheme.mutual);
+        return _ChipStyle('已往来', statusTheme.mutualSoft, statusTheme.mutual);
       case ReciprocityStatus.manualConfirmed:
-        return _ChipStyle('人工确认', statusTheme.waitOtherSoft, statusTheme.waitOther);
+        return _ChipStyle('手动确认', statusTheme.waitOtherSoft, statusTheme.waitOther);
       case ReciprocityStatus.manualCanceled:
         return _ChipStyle('已取消', statusTheme.noNeedSoft, statusTheme.noNeed);
     }

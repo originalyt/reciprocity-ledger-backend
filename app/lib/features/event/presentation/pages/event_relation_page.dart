@@ -29,6 +29,7 @@ class _EventRelationPageState extends ConsumerState<EventRelationPage> with Sing
   List<SuggestRelationVO> _suggestions = [];
   bool _isLoading = true;
   Object? _error;
+  int _lastRefreshVersion = -1;
 
   @override
   void initState() {
@@ -58,6 +59,7 @@ class _EventRelationPageState extends ConsumerState<EventRelationPage> with Sing
           _relations = results[0] as List<EventRelationVO>;
           _suggestions = results[1] as List<SuggestRelationVO>;
           _isLoading = false;
+          _lastRefreshVersion = ref.read(dataRefreshProvider);
         });
       }
     } catch (e) {
@@ -130,7 +132,16 @@ class _EventRelationPageState extends ConsumerState<EventRelationPage> with Sing
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    // 监听数据刷新通知
+    final refreshVersion = ref.watch(dataRefreshProvider);
+    if (refreshVersion != _lastRefreshVersion) {
+      _lastRefreshVersion = refreshVersion;
+      Future.microtask(() {
+        if (mounted && !_isLoading) {
+          _loadData();
+        }
+      });
+    }
 
     if (_isLoading) {
       return Scaffold(

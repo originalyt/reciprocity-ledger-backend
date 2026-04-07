@@ -24,6 +24,7 @@ class _ContactDetailPageState extends ConsumerState<ContactDetailPage> {
   ContactDetail? _detail;
   Object? _error;
   bool _isLoading = true;
+  int _lastRefreshVersion = -1;
 
   @override
   void initState() {
@@ -42,6 +43,7 @@ class _ContactDetailPageState extends ConsumerState<ContactDetailPage> {
         setState(() {
           _detail = detail;
           _isLoading = false;
+          _lastRefreshVersion = ref.read(dataRefreshProvider);
         });
       }
     } catch (e) {
@@ -56,6 +58,17 @@ class _ContactDetailPageState extends ConsumerState<ContactDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 监听数据刷新通知
+    final refreshVersion = ref.watch(dataRefreshProvider);
+    if (refreshVersion != _lastRefreshVersion) {
+      _lastRefreshVersion = refreshVersion;
+      Future.microtask(() {
+        if (mounted && !_isLoading) {
+          _loadData();
+        }
+      });
+    }
+
     final theme = Theme.of(context);
 
     if (_isLoading) {
@@ -110,7 +123,7 @@ class _ContactDetailPageState extends ConsumerState<ContactDetailPage> {
             ),
           ),
           const SizedBox(height: 12),
-          Text('待处理闭环 ${detail.unclosedReciprocityCount} 项', style: theme.textTheme.bodyMedium),
+          Text('待往来 ${detail.unclosedReciprocityCount} 项', style: theme.textTheme.bodyMedium),
           const SizedBox(height: 16),
           Row(
             children: [

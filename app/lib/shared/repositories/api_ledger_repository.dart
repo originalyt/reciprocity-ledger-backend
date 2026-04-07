@@ -103,12 +103,16 @@ class ApiLedgerRepository implements LedgerRepository {
         final map = _asMap(item);
         return ReciprocityEventSummary(
           matchId: _stringValue(map['reciprocityMatchId']),
+          recordId: _nullableString(map['recordId']),
           contactId: _stringValue(map['contactId']),
           contactName: _stringValue(map['contactName']),
           eventTypeId: _stringValue(map['eventTypeId']),
           eventTypeName: _stringValue(map['eventTypeName']),
           matchType: _stringValue(map['matchType']),
           status: parseReciprocityStatus(map['reciprocityStatus']?.toString()),
+          noNeedReason: _nullableString(map['noNeedReason']),
+          direction: _nullableString(map['direction']),
+          remark: _nullableString(map['remark']),
           records: _asList(map['records']).map((r) {
             final recordMap = _asMap(r);
             return ReciprocityRecordItem(
@@ -117,6 +121,8 @@ class ApiLedgerRepository implements LedgerRepository {
               eventOwnerType: _stringValue(recordMap['eventOwnerType']),
               amount: _doubleValue(recordMap['amount']),
               recordDate: _dateValue(recordMap['recordDate']),
+              direction: _nullableString(recordMap['direction']),
+              remark: _nullableString(recordMap['remark']),
             );
           }).toList(),
         );
@@ -515,5 +521,14 @@ class ApiLedgerRepository implements LedgerRepository {
         return UnlinkedEventVO.fromJson(_asMap(item));
       }).toList();
     });
+  }
+
+  @override
+  Future<String> markReciprocityNoNeed(String recordId, {String? reason}) async {
+    final result = await _apiClient.post('/app/reciprocity/mark-no-need', {
+      'recordId': recordId,
+      'reason': reason,
+    }, fromJsonT: (json) => _asMap(json));
+    return _stringValue(result['id']);
   }
 }

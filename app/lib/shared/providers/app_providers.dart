@@ -18,14 +18,23 @@ LedgerRepository createLedgerRepository(WidgetRef ref) =>
 // ============================================
 
 /// 数据刷新通知 Provider
-/// 当数据变更时（如新增记录），调用 ref.invalidate(dataRefreshProvider) 触发刷新
-final dataRefreshProvider = Provider<int>((ref) {
-  return 0;
+/// 当数据变更时（如新增记录），调用 ref.read(dataRefreshProvider.notifier).refresh() 触发刷新
+final dataRefreshProvider = NotifierProvider<DataRefreshNotifier, int>(() {
+  return DataRefreshNotifier();
 });
+
+/// 数据刷新通知器
+class DataRefreshNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  /// 触发刷新，增加版本号
+  void refresh() => state++;
+}
 
 /// 触发数据刷新
 void triggerDataRefresh(WidgetRef ref) {
-  ref.invalidate(dataRefreshProvider);
+  ref.read(dataRefreshProvider.notifier).refresh();
 }
 
 // ============================================
@@ -95,6 +104,10 @@ Future<List<SuggestRelationVO>> fetchSuggestRelations(WidgetRef ref, String self
 
 Future<List<UnlinkedEventVO>> fetchUnlinkedEvents(WidgetRef ref, {String? eventTypeId}) =>
     createLedgerRepository(ref).fetchUnlinkedEvents(eventTypeId: eventTypeId);
+
+/// 标记往来记录为无需往来
+Future<String> markReciprocityNoNeed(WidgetRef ref, String recordId, {String? reason}) =>
+    createLedgerRepository(ref).markReciprocityNoNeed(recordId, reason: reason);
 
 // ============================================
 // State providers for filters (no auth needed)
